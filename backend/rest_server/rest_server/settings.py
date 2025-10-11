@@ -28,6 +28,12 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+LOGIN_URL = '/admin/login/'
+
+# oAuth keys
+OAUTH_CLIENT_ID = "hWRE7xYtoLIw3k6q9PJeUlIGykrpnSHKReORaJec"
+OAUTH_CLIENT_SECRET = "4LZ5CutF2ronnlIBRBuggUoZpIhJvfxXdAMXw9hi6dAeWc2avJ8FxrgnZiQihCuHIR2x4R4Ag9f7tNVZ2n78WIzjxaB6xNuG214GBbPgrMltg3RehkOBiVwmqT8K9CzP"
+hey = "pbkdf2_sha256$1000000$HUIxM91imet1W0GFdMAt5p$GqxRRX3nvCo6WBwh0c9Ip+Z4I16JAmK6yCrdaHJl8s8="
 
 # Application definition
 
@@ -40,10 +46,16 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
      # third-party
     "rest_framework",
+    'oauth2_provider',
 
     # local
     "login",
     "functionality",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # Your Next.js frontend
 ]
 
 MIDDLEWARE = [
@@ -120,13 +132,18 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+OAUTH2_PROVIDER = {
+    # this is the list of available scopes
+    'SCOPES': {'read': 'Read scope', 'write': 'Write scope', 'groups': 'Access to your groups'}
+}
+
 REST_FRAMEWORK = {
-    # "DEFAULT_AUTHENTICATION_CLASSES": (
-    #     "rest_framework_simplejwt.authentication.JWTAuthentication",
-    # ),
-    # "DEFAULT_PERMISSION_CLASSES": (
-    #     "rest_framework.permissions.IsAuthenticated",
-    # ),
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+    ), 
+     'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    )
 }
 
 
