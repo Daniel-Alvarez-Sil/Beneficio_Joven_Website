@@ -1,8 +1,15 @@
-from rest_framework import generics, permissions
-from .models import AdministradorNegocio  # adjust import path
-from .serializers import AdministradorNegocioSerializer
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status, permissions
+from .serializers import AltaNegocioYAdminSerializer
 
-class AdministradorNegocioCreateView(generics.CreateAPIView):
-    queryset = AdministradorNegocio.objects.all()
-    serializer_class = AdministradorNegocioSerializer
-    permission_classes = [permissions.AllowAny]  # optional; keep/remove as you need
+class AdministradorNegocioCreateView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = AltaNegocioYAdminSerializer(
+            data=request.data, context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+        result = serializer.save()
+        return Response(serializer.to_representation(result), status=status.HTTP_201_CREATED)

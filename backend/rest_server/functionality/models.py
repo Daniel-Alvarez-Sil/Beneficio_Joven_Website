@@ -94,7 +94,7 @@ class Categoria(models.Model):
 
 class Negocio(models.Model):
     id = models.BigIntegerField(primary_key=True)
-    id_usuario = models.ForeignKey('Usuario', models.DO_NOTHING, db_column='id_usuario')
+    # id_usuario = models.ForeignKey('Usuario', models.DO_NOTHING, db_column='id_usuario')
     correo = models.CharField(max_length=255)
     telefono = models.CharField(max_length=20, blank=True, null=True)
     nombre = models.CharField(max_length=150)
