@@ -26,6 +26,10 @@ class LoginView(APIView):
         username = request.data.get('username')
         password = request.data.get('password')
 
+        usuario = User.objects.filter(username=username).exclude(tipo='usuario').first()
+        if not usuario:
+            return Response({'error': 'Invalid credentials or user type'}, status=status.HTTP_401_UNAUTHORIZED)
+
         token_url = request.build_absolute_uri('/o/token/')
         data = {
             'grant_type': 'password',
@@ -40,9 +44,10 @@ class LoginView(APIView):
         print(token_url)
 
         if response.status_code == 200:
-            usuario = User.objects.filter(username=username).first()
             # Return the response and the user's role
+            tipo = usuario.tipo
             response_data = response.json()
+            response_data['tipo'] = tipo
             return Response(response_data, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid credentials'}, status=response.status_code)

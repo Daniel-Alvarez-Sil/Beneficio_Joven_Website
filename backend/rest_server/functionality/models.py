@@ -25,7 +25,7 @@ class Administrador(models.Model):
 
 class AdministradorNegocio(models.Model):
     id = models.BigIntegerField(primary_key=True)
-    id_negocio = models.ForeignKey('Negocio', models.DO_NOTHING, db_column='id_negocio')
+    id_negocio = models.ForeignKey('Negocio', models.DO_NOTHING, db_column='id_negocio', null=True, blank=True)
     correo = models.CharField(max_length=255)
     telefono = models.CharField(max_length=20, blank=True, null=True)
     nombre = models.CharField(max_length=100)

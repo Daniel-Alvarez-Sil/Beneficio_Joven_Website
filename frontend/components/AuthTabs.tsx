@@ -1,4 +1,3 @@
-'use client';
 
 import { useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -6,6 +5,8 @@ import { AuthLayout } from "./AuthLayout";
 import { LoginForm } from "./LoginForm";
 
 type Credentials = { email: string; password: string };
+
+import { signup } from "@/actions/login/auth"; // adjust the path to your auth.ts
 
 interface AuthTabsProps {
   defaultTab?: "admin" | "colaborador";
@@ -52,6 +53,7 @@ export function AuthTabs({
             embedded
             userType="admin"
             onLogin={onAdminLogin}
+            action={signup} 
           />
         </TabsContent>
 
@@ -61,6 +63,7 @@ export function AuthTabs({
             embedded
             userType="colaborador"
             onLogin={onColabLogin}
+            action={signup} 
             // En lugar del RegisterForm antiguo, disparamos el flujo nuevo (paso 1)
             onSwitchToRegister={() => onColabRegister?.()}
           />

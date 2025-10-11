@@ -8,6 +8,8 @@ import { Badge } from "./ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Plus, Edit, Trash2, LogOut, Gift, Eye, Users } from "lucide-react";
 
+import { logout } from '@/actions/login/auth'
+
 interface ColaboradorDashboardProps {
   onLogout: () => void;
   colaboradorName: string;
@@ -130,10 +132,12 @@ export function ColaboradorDashboard({ onLogout, colaboradorName }: ColaboradorD
               <p className="text-sm text-gray-600">Bienvenido, {colaboradorName}</p>
             </div>
           </div>
-          <Button variant="outline" onClick={onLogout}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Cerrar sesión
-          </Button>
+          <form action={logout}>
+            <Button variant="outline" type="submit">
+              <LogOut className="w-4 h-4 mr-2" />
+              Cerrar sesión
+            </Button>
+          </form>
         </div>
       </header>
 
