@@ -1,12 +1,12 @@
-export interface AdminNegocioInput {
-  // id_negocio: se crea en el paso 2 (o en backend). Aquí no se pide todavía.
+// components/types/registro.ts
+export interface AdminInput {
   correo: string;
   telefono: string;
   nombre: string;
   apellido_paterno: string;
   apellido_materno: string;
   usuario: string;
-  contraseña: string;
+  contrasena: string;
 }
 
 export interface NegocioInput {
@@ -15,17 +15,17 @@ export interface NegocioInput {
   nombre: string;
   rfc: string;
   sitio_web?: string;
+  estatus: "En Revision" | "En revision" | "Aprobado" | "Rechazado";
   cp: string;
   numero_ext: string;
   numero_int?: string;
   colonia: string;
   municipio: string;
   estado: string;
-  // logo: lo manejamos como string (URL/base64) para ejemplo simple
-  logo?: string;
+  logo?: string; // base64 o url
 }
 
-export interface SolicitudRegistroPayload {
-  administrador_negocio: AdminNegocioInput;
+export interface RegistroPayload {
   negocio: NegocioInput;
+  administrador: AdminInput;
 }
