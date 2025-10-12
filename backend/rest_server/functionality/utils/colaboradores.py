@@ -7,7 +7,7 @@ from ..serializers import (AltaNegocioYAdminSerializer, PromocionListSerializer,
 
 from django.db import transaction, IntegrityError
 
-from ..models import Promocion, Apartado, AdministradorNegocio
+from ..models import Promocion, Canje, AdministradorNegocio
 from login.models import User
 
 from datetime import timedelta
@@ -185,9 +185,9 @@ class EstadisticasNegocioView(APIView):
         # Ajusta el filtro de estatus según tu catálogo real; aquí se asume 'canjeado'
         since = timezone.now() - timedelta(days=7)
         canjes_qs = (
-            Apartado.objects
+            Canje.objects
             .select_related("id_promocion")
-            .filter(id_promocion__id_negocio=id_negocio, fecha_creado__gte=since, estatus="canjeado")
+            .filter(id_promocion__id_negocio=id_negocio, fecha_creado__gte=since)
             .order_by("fecha_creado")
         )
 
