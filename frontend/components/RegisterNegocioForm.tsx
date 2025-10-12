@@ -20,7 +20,7 @@ export function RegisterNegocioForm() {
     nombre: '',
     rfc: '',
     sitio_web: '',
-    estatus: 'En revision', // default
+    estatus: 'En revision',
     cp: '',
     numero_ext: '',
     numero_int: '',
@@ -30,11 +30,14 @@ export function RegisterNegocioForm() {
     logo: '',
   });
 
+  // estado del toast
+  const [showToast, setShowToast] = useState(false);
+
   // Cargar admin del paso 1 y borrador de negocio si existe
   useEffect(() => {
     const raw = localStorage.getItem(LS_ADMIN_KEY);
     if (!raw) {
-      router.replace('/registro/colaborador'); // si falta paso 1
+      router.replace('/registro/colaborador');
       return;
     }
     try {
@@ -53,7 +56,7 @@ export function RegisterNegocioForm() {
   const onChange = (field: keyof NegocioInput, value: string) =>
     setForm((prev) => {
       const next = { ...prev, [field]: value };
-      localStorage.setItem(LS_NEGOCIO_KEY, JSON.stringify(next)); // autosave
+      localStorage.setItem(LS_NEGOCIO_KEY, JSON.stringify(next));
       return next;
     });
 
@@ -78,7 +81,7 @@ export function RegisterNegocioForm() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-from-step': '2', // clave para el guard del route
+        'x-from-step': '2',
       },
       body: JSON.stringify(payload),
     });
@@ -86,7 +89,13 @@ export function RegisterNegocioForm() {
     if (res.ok) {
       localStorage.removeItem(LS_ADMIN_KEY);
       localStorage.removeItem(LS_NEGOCIO_KEY);
-      router.push('/registro/gracias');
+
+      // mostrar toast y redirigir después
+      setShowToast(true);
+      setTimeout(() => {
+        setShowToast(false);
+        router.push('/registro/gracias');
+      }, 2500);
     } else {
       const err = await res.json().catch(() => ({}));
       alert(err?.message ?? 'No se pudo enviar la solicitud.');
@@ -95,7 +104,7 @@ export function RegisterNegocioForm() {
 
   return (
     <AuthLayout title="REGISTRO (Paso 2)" subtitle="Datos del negocio">
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4 relative">
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="nombre">Nombre del negocio</Label>
@@ -156,7 +165,27 @@ export function RegisterNegocioForm() {
         </div>
 
         <Button type="submit" className="w-full btn-gradient text-white">Enviar solicitud</Button>
+
+        {/* Toast centrado */}
+        {showToast && (
+          <div className="fixed inset-0 flex items-center justify-center z-50">
+            <div className="bg-green-600 text-white px-6 py-4 rounded-xl shadow-lg text-lg animate-fade-in">
+              ✅ Solicitud enviada con éxito
+            </div>
+          </div>
+        )}
       </form>
+
+      {/* animación fade-in */}
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .animate-fade-in {
+          animation: fadeIn 0.3s ease-out forwards;
+        }
+      `}</style>
     </AuthLayout>
   );
 }

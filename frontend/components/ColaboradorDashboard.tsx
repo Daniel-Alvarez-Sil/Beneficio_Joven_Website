@@ -25,7 +25,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, AreaChart, Area, LabelList 
 interface ColaboradorDashboardProps {
   onLogout: () => void
   colaboradorName: string
-  /** Pásame el id del negocio para pedir estadísticas. Default: "1" mientras integras auth */
+  /** Pásame el id del negocio para pedir estadísticas/filtrar. */
   idNegocio?: string
 }
 
@@ -39,7 +39,6 @@ interface Cupon {
   usos: number
 }
 
-// API de estadísticas (formato que compartiste)
 type ApiRank = Record<string, string> // {"titulo": "numero_de_canjes"} * 5
 type ApiHistorico = Record<string, [string, number]> // {"fecha-hora":[titulo, monto_descuento]}
 interface ApiStatsResponse {
@@ -49,11 +48,23 @@ interface ApiStatsResponse {
   "historico de canjes_ultimos_siete_dias": ApiHistorico
 }
 
+interface ApiPromocion {
+  id: number
+  nombre: string
+  descripcion: string
+  fecha_inicio: string   // ISO
+  fecha_fin: string      // ISO
+  tipo: string | null
+  porcentaje: string | null  // "15.00"
+  precio: string | null      // "85.00000"
+  activo: boolean
+  numero_canjeados: number
+}
+
 // =========================
-// Helpers de transformación
+// Helpers
 // =========================
 function toHorizontalBarData(rank: ApiRank) {
-  // Convierte { "Titulo A": "12", "Titulo B": "7", ... } a [{name:"Titulo A", value:12}, ...]
   return Object.entries(rank).map(([titulo, canjes]) => ({
     name: titulo,
     value: Number(canjes ?? 0),
@@ -61,8 +72,6 @@ function toHorizontalBarData(rank: ApiRank) {
 }
 
 function toDailyAreaData(hist: ApiHistorico) {
-  // Convierte {"2025-10-01T10:00": ["Promo", 30], ...}
-  // a [{date:"2025-10-01", totalMonto: XX, count: YY}, ...] agrupado por día
   const map = new Map<string, { date: string; totalMonto: number; count: number }>()
   Object.entries(hist).forEach(([fechaHora, [_titulo, monto]]) => {
     const d = new Date(fechaHora)
@@ -72,42 +81,74 @@ function toDailyAreaData(hist: ApiHistorico) {
     prev.count += 1
     map.set(key, prev)
   })
-  // Orden por fecha ascendente
   return Array.from(map.values()).sort((a, b) => (a.date < b.date ? -1 : 1))
 }
 
-// =========================
-// Configs de chart (shad) + Paletas de marca
-// =========================
+const fmtYYYYMMDD = (iso: string) => {
+  try { return new Date(iso).toISOString().slice(0,10) } catch { return "" }
+}
 
-// === Configs con RGB ===
+const deriveEstado = (activo: boolean, fechaFinISO: string): Cupon["estado"] => {
+  const hoy = new Date()
+  const fin = new Date(fechaFinISO)
+  if (isNaN(fin.getTime())) return activo ? "activo" : "pausado"
+  if (fin < hoy) return "vencido"
+  return activo ? "activo" : "pausado"
+}
+
+const deriveDescuento = (porcentaje: string | null, precio: string | null) => {
+  if (porcentaje && !isNaN(Number(porcentaje))) {
+    return `${Number(porcentaje)}%`
+  }
+  if (precio && !isNaN(Number(precio))) {
+    return `$${Number(precio)}`
+  }
+  return "—"
+}
+
+const mapApiToCupon = (p: ApiPromocion): Cupon => ({
+  id: p.id,
+  titulo: p.nombre,
+  descripcion: p.descripcion,
+  descuento: deriveDescuento(p.porcentaje, p.precio),
+  validoHasta: fmtYYYYMMDD(p.fecha_fin),
+  estado: deriveEstado(p.activo, p.fecha_fin),
+  usos: p.numero_canjeados ?? 0,
+})
+
+// Fetch POST helper
+async function postJSON<T>(url: string, data: unknown, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      // Authorization: `Bearer ${token}`, // <- descomenta si tu API lo requiere
+      ...(init?.headers ?? {}),
+    },
+    body: JSON.stringify(data),
+    ...init,
+  })
+  if (!res.ok) {
+    // if (res.status === 401 || res.status === 403) await logout() // opcional
+    throw new Error(`HTTP ${res.status}`)
+  }
+  return res.json()
+}
+
+// =========================
+// Configs de chart
+// =========================
 const areaConfig: ChartConfig = {
-  totalMonto: { label: "Monto descuento", color: "rgb(32, 178, 170)" }, // teal (puedes poner azul si prefieres)
-};
+  totalMonto: { label: "Monto descuento", color: "rgb(32, 178, 170)" },
+}
 
 const barBestConfig: ChartConfig = {
-  value: { label: "Canjes (mejores)", color: "rgb(35, 103, 242)" }, // AZUL
-};
+  value: { label: "Canjes (mejores)", color: "rgb(35, 103, 242)" },
+}
 
 const barWorstConfig: ChartConfig = {
-  value: { label: "Canjes (peores)", color: "rgb(122, 62, 242)" },  // MORADO
-};
-
-const PALETTE = {
-  best: {
-    gradId: "barsBestGrad",
-    from: "rgb(35, 103, 242)", // azul claro
-    to:   "rgb(22, 72, 199)",  // azul más profundo
-    stroke: "rgb(18, 60, 170)",
-  },
-  worst: {
-    gradId: "barsWorstGrad",
-    from: "rgb(122, 62, 242)", // morado
-    to:   "rgb(88, 34, 202)",  // morado más profundo
-    stroke: "rgb(72, 24, 180)",
-  },
-};
-
+  value: { label: "Canjes (peores)", color: "rgb(122, 62, 242)" },
+}
 
 // =========================
 // Componente principal
@@ -115,39 +156,14 @@ const PALETTE = {
 export function ColaboradorDashboard({
   onLogout,
   colaboradorName,
-  idNegocio = "1",
+  idNegocio = "3", // <- default a 3 para tu ejemplo del endpoint
 }: ColaboradorDashboardProps) {
-  // ====== Estado cupones (mock local, igual que tu código) ======
-  const [cupones, setCupones] = useState<Cupon[]>([
-    {
-      id: 1,
-      titulo: "Descuento 20% en servicios",
-      descripcion: "Obtén 20% de descuento en todos nuestros servicios de consultoría",
-      descuento: "20%",
-      validoHasta: "2025-12-31",
-      estado: "activo",
-      usos: 45,
-    },
-    {
-      id: 2,
-      titulo: "2x1 en consultoría",
-      descripcion: "Paga una sesión de consultoría y obtén la segunda gratis",
-      descuento: "50%",
-      validoHasta: "2025-11-30",
-      estado: "pausado",
-      usos: 12,
-    },
-    {
-      id: 3,
-      titulo: "15% descuento primera compra",
-      descripcion: "Descuento especial para nuevos clientes",
-      descuento: "15%",
-      validoHasta: "2025-10-15",
-      estado: "vencido",
-      usos: 28,
-    },
-  ])
+  // ====== Estado cupones desde API ======
+  const [cupones, setCupones] = useState<Cupon[]>([])
+  const [loadingCupones, setLoadingCupones] = useState(false)
+  const [errorCupones, setErrorCupones] = useState<string | null>(null)
 
+  // ====== Estado del modal/CRUD local (UI sobre arreglo cargado) ======
   const [isCreating, setIsCreating] = useState(false)
   const [editingCupon, setEditingCupon] = useState<Cupon | null>(null)
   const [formData, setFormData] = useState({
@@ -157,17 +173,48 @@ export function ColaboradorDashboard({
     validoHasta: "",
   })
 
-  // ====== Estado estadísticas (desde API) ======
+  // ====== Estado estadísticas (API real) ======
   const [loadingStats, setLoadingStats] = useState(false)
   const [statsError, setStatsError] = useState<string | null>(null)
   const [totalCanjes, setTotalCanjes] = useState<number>(0)
   const [top5, setTop5] = useState<{ name: string; value: number }[]>([])
   const [bottom5, setBottom5] = useState<{ name: string; value: number }[]>([])
-  const [historico, setHistorico] = useState<{ date: string; totalMonto: number; count: number }[]>(
-    []
-  )
+  const [historico, setHistorico] = useState<{ date: string; totalMonto: number; count: number }[]>([])
 
-  // ====== Fetch estadísticas ======
+  // ====== Fetch promociones (BD real) ======
+  useEffect(() => {
+    let cancelled = false
+
+    async function fetchPromociones() {
+      try {
+        setLoadingCupones(true)
+        setErrorCupones(null)
+
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? ""
+        const url = `${baseUrl}/functionality/list/promociones`
+        const res = await fetch(url, { method: "GET" })
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const json: ApiPromocion[] = await res.json()
+        if (cancelled) return
+
+        const mapped = json.map(mapApiToCupon)
+        setCupones(mapped)
+
+        // Si deseas que el KPI venga SOLO del endpoint de estadísticas, comenta estas 2 líneas:
+        const total = json.reduce((acc, p) => acc + (p.numero_canjeados ?? 0), 0)
+        setTotalCanjes(total)
+      } catch (e: any) {
+        if (!cancelled) setErrorCupones(e?.message ?? "Error cargando promociones")
+      } finally {
+        if (!cancelled) setLoadingCupones(false)
+      }
+    }
+
+    fetchPromociones()
+    return () => { cancelled = true }
+  }, [idNegocio])
+
+  // ====== Fetch estadísticas (REAL) ======
   useEffect(() => {
     let cancelled = false
     async function fetchStats() {
@@ -175,56 +222,24 @@ export function ColaboradorDashboard({
         setLoadingStats(true)
         setStatsError(null)
 
-        // Ajusta a tu endpoint real:
-        // const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/estadisticas`, {
-        //   method: "POST",
-        //   headers: { "Content-Type": "application/json" },
-        //   body: JSON.stringify({ id_negocio: idNegocio }),
-        // })
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? ""
+        const url = `${baseUrl}/functionality/promociones/estadisticas/`
 
-        // DEMO: simular respuesta con datos compatibles
-        const demo: ApiStatsResponse = {
-          num_canjes_total_de_todas_las_promociones: "367",
-          "5_promociones_con_mas_canjes": {
-            "2x1 Burgers": "120",
-            "10% en Café": "88",
-            "Envío Gratis": "64",
-            "25% en Postres": "53",
-            "BOGO Pizza": "41",
-          },
-          "5_promociones_con_menos_canjes": {
-            "Combo Estudiante": "7",
-            "Martes de Nachos": "9",
-            "Descuento Ferias": "11",
-            "Café de Temporada": "12",
-            "Regalo Llaveros": "14",
-          },
-          "historico de canjes_ultimos_siete_dias": {
-            "2025-10-05T10:25:00": ["2x1 Burgers", 50],
-            "2025-10-05T13:00:00": ["10% en Café", 12],
-            "2025-10-06T09:30:00": ["25% en Postres", 30],
-            "2025-10-06T11:45:00": ["Envío Gratis", 15],
-            "2025-10-07T18:10:00": ["BOGO Pizza", 60],
-            "2025-10-08T12:00:00": ["2x1 Burgers", 25],
-            "2025-10-08T13:30:00": ["10% en Café", 10],
-            "2025-10-09T11:00:00": ["2x1 Burgers", 35],
-            "2025-10-10T16:20:00": ["Envío Gratis", 20],
-            "2025-10-11T10:05:00": ["25% en Postres", 18],
-          },
+        const negocioId = Number(idNegocio || "3")
+        if (!Number.isFinite(negocioId) || negocioId <= 0) {
+          throw new Error("id_negocio inválido")
         }
 
-        // Si usas backend real:
-        // if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        // const data: ApiStatsResponse = await res.json()
-
-        const data = demo
-
+        const payload = { id_negocio: negocioId }
+        const json = await postJSON<ApiStatsResponse>(url, payload)
         if (cancelled) return
 
-        setTotalCanjes(Number(data.num_canjes_total_de_todas_las_promociones ?? 0))
-        setTop5(toHorizontalBarData(data["5_promociones_con_mas_canjes"]))
-        setBottom5(toHorizontalBarData(data["5_promociones_con_menos_canjes"]))
-        setHistorico(toDailyAreaData(data["historico de canjes_ultimos_siete_dias"]))
+        const total = Number(json.num_canjes_total_de_todas_las_promociones ?? 0)
+        setTotalCanjes(Number.isFinite(total) ? total : 0)
+
+        setTop5(toHorizontalBarData(json["5_promociones_con_mas_canjes"] ?? {}))
+        setBottom5(toHorizontalBarData(json["5_promociones_con_menos_canjes"] ?? {}))
+        setHistorico(toDailyAreaData(json["historico de canjes_ultimos_siete_dias"] ?? {}))
       } catch (err: any) {
         if (!cancelled) setStatsError(err?.message ?? "Error al cargar estadísticas")
       } finally {
@@ -232,9 +247,7 @@ export function ColaboradorDashboard({
       }
     }
     fetchStats()
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [idNegocio])
 
   // ====== Stats locales de los cupones (UI) ======
@@ -246,7 +259,7 @@ export function ColaboradorDashboard({
     }
   }, [cupones])
 
-  // ====== Handlers CRUD cupones ======
+  // ====== Handlers CRUD (local, UI) ======
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (editingCupon) {
@@ -317,7 +330,7 @@ export function ColaboradorDashboard({
       </header>
 
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-        {/* KPIs (locales + total API) */}
+        {/* KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="border-muted/60 hover:shadow-sm transition">
             <CardContent className="p-4">
@@ -362,7 +375,13 @@ export function ColaboradorDashboard({
                 <div>
                   <p className="text-xs text-muted-foreground">Canjes totales (API)</p>
                   <p className="text-2xl font-semibold">
-                    {loadingStats ? <span className="text-sm text-muted-foreground">Cargando…</span> : totalCanjes.toLocaleString()}
+                    {loadingStats ? (
+                      <span className="text-sm text-muted-foreground">Cargando…</span>
+                    ) : statsError ? (
+                      <span className="text-sm text-destructive">{statsError}</span>
+                    ) : (
+                      totalCanjes.toLocaleString()
+                    )}
                   </p>
                 </div>
               </div>
@@ -386,10 +405,7 @@ export function ColaboradorDashboard({
                 <div className="text-destructive text-sm">{statsError}</div>
               ) : (
                 <ChartContainer config={areaConfig} className="h-[260px] w-full">
-                  <AreaChart
-                    data={historico}
-                    margin={{ left: 12, right: 12, top: 10, bottom: 0 }}
-                  >
+                  <AreaChart data={historico} margin={{ left: 12, right: 12, top: 10, bottom: 0 }}>
                     <CartesianGrid vertical={false} />
                     <XAxis
                       dataKey="date"
@@ -449,7 +465,7 @@ export function ColaboradorDashboard({
                 <ChartContainer config={barBestConfig} className="h-[260px] w-full">
                   <BarChart
                     accessibilityLayer
-                    data={[...top5].sort((a, b) => a.value - b.value)} // de menor a mayor para layout=vertical
+                    data={[...top5].sort((a, b) => a.value - b.value)}
                     layout="vertical"
                     margin={{ left: 0, right: 16, top: 10, bottom: 10 }}
                   >
@@ -597,66 +613,84 @@ export function ColaboradorDashboard({
         </div>
 
         {/* Lista de cupones */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {cupones.map((cupon) => (
-            <Card key={cupon.id} className="hover:shadow-sm transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start gap-2">
-                  <CardTitle className="text-lg leading-tight">{cupon.titulo}</CardTitle>
-                  <Badge
-                    variant={
-                      cupon.estado === "activo" ? "default" : cupon.estado === "pausado" ? "secondary" : "destructive"
-                    }
-                  >
-                    {cupon.estado}
-                  </Badge>
-                </div>
-              </CardHeader>
+        {loadingCupones && (
+          <Card>
+            <CardContent className="p-10 text-center text-muted-foreground">
+              Cargando promociones…
+            </CardContent>
+          </Card>
+        )}
 
-              <CardContent className="space-y-4">
-                <p className="text-muted-foreground text-sm">{cupon.descripcion}</p>
+        {!loadingCupones && errorCupones && (
+          <Card>
+            <CardContent className="p-10 text-center text-destructive">
+              {errorCupones}
+            </CardContent>
+          </Card>
+        )}
 
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>Descuento:</span>
-                    <span className="font-semibold text-green-600">{cupon.descuento}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Válido hasta:</span>
-                    <span>{cupon.validoHasta}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Usos:</span>
-                    <span className="font-semibold">{cupon.usos}</span>
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => handleEdit(cupon)}>
-                    <Edit className="w-3 h-3 mr-1" />
-                    Editar
-                  </Button>
-
-                  {cupon.estado !== "vencido" && (
-                    <Button
-                      size="sm"
-                      variant={cupon.estado === "activo" ? "secondary" : "default"}
-                      onClick={() => toggleEstado(cupon.id)}
+        {!loadingCupones && !errorCupones && cupones.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {cupones.map((cupon) => (
+              <Card key={cupon.id} className="hover:shadow-sm transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex justify-between items-start gap-2">
+                    <CardTitle className="text-lg leading-tight">{cupon.titulo}</CardTitle>
+                    <Badge
+                      variant={
+                        cupon.estado === "activo" ? "default" : cupon.estado === "pausado" ? "secondary" : "destructive"
+                      }
                     >
-                      {cupon.estado === "activo" ? "Pausar" : "Activar"}
+                      {cupon.estado}
+                    </Badge>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="space-y-4">
+                  <p className="text-muted-foreground text-sm">{cupon.descripcion}</p>
+
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>Descuento:</span>
+                      <span className="font-semibold text-green-600">{cupon.descuento}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Válido hasta:</span>
+                      <span>{cupon.validoHasta}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Usos:</span>
+                      <span className="font-semibold">{cupon.usos}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="flex-1" onClick={() => handleEdit(cupon)}>
+                      <Edit className="w-3 h-3 mr-1" />
+                      Editar
                     </Button>
-                  )}
 
-                  <Button size="sm" variant="destructive" onClick={() => handleDelete(cupon.id)}>
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                    {cupon.estado !== "vencido" && (
+                      <Button
+                        size="sm"
+                        variant={cupon.estado === "activo" ? "secondary" : "default"}
+                        onClick={() => toggleEstado(cupon.id)}
+                      >
+                        {cupon.estado === "activo" ? "Pausar" : "Activar"}
+                      </Button>
+                    )}
 
-        {cupones.length === 0 && (
+                    <Button size="sm" variant="destructive" onClick={() => handleDelete(cupon.id)}>
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {!loadingCupones && !errorCupones && cupones.length === 0 && (
           <Card>
             <CardContent className="p-10 text-center">
               <Gift className="w-12 h-12 text-gray-400 mx-auto mb-4" />
