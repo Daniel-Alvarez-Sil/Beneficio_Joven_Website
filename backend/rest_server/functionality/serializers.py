@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
-from .models import AdministradorNegocio, Negocio  # ajusta import
+from .models import AdministradorNegocio, Negocio, SolicitudNegocio # ajusta import
 
 class NegocioCreateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -47,21 +47,9 @@ class AltaNegocioYAdminSerializer(serializers.Serializer):
         # 1) Crear Negocio (fecha_creado e id_usuario se calculan aquí)
         negocio = Negocio.objects.create(
             **negocio_data,
-            # id_usuario_id=request.user.id,   # sin cargar el objeto Usuario
             fecha_creado=timezone.now()
         )
 
-        # 2) Crear el usuario de Django para el admin (password hasheado)
-        User = get_user_model()
-        user = User.objects.create_user(
-            username=admin_data["usuario"],
-            email=admin_data.get("correo"),
-            password=admin_data["contrasena"],
-        )
-        user.tipo = "colaborador"  # valor del choice
-        user.first_name = admin_data.get("nombre", "") or ""
-        user.last_name = admin_data.get("apellido_paterno", "") or ""
-        user.save(update_fields=["tipo", "first_name", "last_name"])
 
         # 3) Crear AdministradorNegocio ligado al Negocio creado
         admin = AdministradorNegocio.objects.create(
@@ -69,13 +57,19 @@ class AltaNegocioYAdminSerializer(serializers.Serializer):
             **admin_data
         )
 
+        # 4) Crear solicitud de negocio pendiente
+        # solicitud = SolicitudNegocio.objects.create(
+        #     id_negocio=negocio,
+        #     estatus="PENDIENTE"
+        # )
+
         # Devolvemos los tres para serializar una respuesta útil
-        return {"negocio": negocio, "administrador": admin, "user": user}
+        return {"negocio": negocio, "administrador": admin}
 
     def to_representation(self, instance):
         negocio = instance["negocio"]
         admin = instance["administrador"]
-        user = instance["user"]
+        # solicitud = instance["solicitud"]
         return {
             "negocio": {
                 "id": negocio.id,
@@ -103,10 +97,28 @@ class AltaNegocioYAdminSerializer(serializers.Serializer):
                 "apellido_paterno": admin.apellido_paterno,
                 "apellido_materno": admin.apellido_materno,
                 "usuario": admin.usuario,
-            },
-            "user": {
-                "id": user.id,
-                "username": user.username,
-                "tipo": user.tipo,
-            }
+            }, 
+            # "solicitud": {
+            #     "id": solicitud.id,
+            #     "id_negocio": negocio.id,
+            #     "estatus": solicitud.estatus,
+            # }
         }
+
+
+from rest_framework import serializers
+from .models import Promocion
+
+class PromocionListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Promocion
+        fields = (
+            "titulo",
+            "descripcion",
+            "inicio_promocion",
+            "final_promocion",
+            "tipo",
+            "monto",
+            "estatus",
+            "numero_canjeados",
+        )

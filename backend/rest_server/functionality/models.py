@@ -1,10 +1,3 @@
-# This is an auto-generated Django model module.
-# You'll have to do the following manually to clean this up:
-#   * Rearrange models' order
-#   * Make sure each model has one field with primary_key=True
-#   * Make sure each ForeignKey and OneToOneField has `on_delete` set to the desired behavior
-#   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
-# Feel free to rename the models, but don't rename db_table values or field names.
 from django.db import models
 
 
@@ -24,7 +17,7 @@ class Administrador(models.Model):
 
 
 class AdministradorNegocio(models.Model):
-    id = models.BigIntegerField(primary_key=True)
+    id = models.BigAutoField(primary_key=True)
     id_negocio = models.ForeignKey('Negocio', models.DO_NOTHING, db_column='id_negocio', null=True, blank=True)
     correo = models.CharField(max_length=255)
     telefono = models.CharField(max_length=20, blank=True, null=True)
@@ -35,7 +28,7 @@ class AdministradorNegocio(models.Model):
     contrasena = models.TextField()
 
     class Meta:
-        managed = False
+        # managed = False
         db_table = 'administrador_negocio'
 
 
@@ -93,7 +86,7 @@ class Categoria(models.Model):
 
 
 class Negocio(models.Model):
-    id = models.BigIntegerField(primary_key=True)
+    id = models.BigAutoField(primary_key=True)
     # id_usuario = models.ForeignKey('Usuario', models.DO_NOTHING, db_column='id_usuario')
     correo = models.CharField(max_length=255)
     telefono = models.CharField(max_length=20, blank=True, null=True)
@@ -111,27 +104,31 @@ class Negocio(models.Model):
     logo = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        # managed = False
         db_table = 'negocio'
 
 
 class Promocion(models.Model):
-    id = models.BigIntegerField(primary_key=True)
-    id_administrador_negocio = models.ForeignKey(AdministradorNegocio, models.DO_NOTHING, db_column='id_administrador_negocio')
-    id_negocio = models.ForeignKey(Negocio, models.DO_NOTHING, db_column='id_negocio')
-    titulo = models.CharField(max_length=200)
+    id = models.BigAutoField(primary_key=True)
+    id_administrador_negocio = models.ForeignKey(AdministradorNegocio, models.DO_NOTHING, db_column='id_administrador_negocio', blank=True, null=True)
+    id_negocio = models.ForeignKey(Negocio, models.DO_NOTHING, db_column='id_negocio', blank=True, null=True)
+    nombre = models.CharField(max_length=200)
     descripcion = models.TextField(blank=True, null=True)
     limite_por_usuario = models.IntegerField(blank=True, null=True)
     limite_total = models.IntegerField(blank=True, null=True)
-    inicio_promocion = models.DateTimeField()
-    final_promocion = models.DateTimeField()
+    fecha_inicio = models.DateTimeField()
+    fecha_fin = models.DateTimeField()
     imagen = models.TextField(blank=True, null=True)
     numero_canjeados = models.IntegerField()
     tipo = models.CharField(max_length=20)
-    monto = models.DecimalField(max_digits=12, decimal_places=2)
+    porcentaje = models.DecimalField(max_digits=12, decimal_places=2)
+    precio = models.DecimalField(max_digits=12, decimal_places=5)
+    # Estatus opciones "activado, desactivado"
+    activo = models.BooleanField(default=True)
+    fecha_creado = models.DateTimeField(auto_now=True)
 
     class Meta:
-        managed = False
+        # managed = False
         db_table = 'promocion'
 
 
@@ -146,12 +143,12 @@ class PromocionCategoria(models.Model):
 
 
 class SolicitudNegocio(models.Model):
-    id = models.BigIntegerField(primary_key=True)
-    id_negocio = models.ForeignKey(Negocio, models.DO_NOTHING, db_column='id_negocio')
+    id = models.BigAutoField(primary_key=True)
+    id_negocio = models.ForeignKey(Negocio, models.DO_NOTHING, db_column='id_negocio', blank=True, null=True)
     estatus = models.CharField(max_length=20)
 
     class Meta:
-        managed = False
+        # managed = False
         db_table = 'solicitud_negocio'
 
 
