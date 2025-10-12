@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { ColaboradorHeader } from '@/components/ColaboradorHeader';
 import { ColaboradorDashboard } from '@/components/ColaboradorDashboard';
 import { ColaboradorPromociones } from '@/components/ColaboradorPromocion';
 
@@ -23,10 +24,11 @@ export default function App() {
 
   return (
     <div className="container mx-auto max-w-6xl py-6">
+      <ColaboradorHeader />
       <Tabs defaultValue="dashboard" className="w-full">
-        <div className="mb-4 flex items-center justify-between">
+        {/* <div className="mb-4 flex items-center justify-between">
           <h1 className="text-2xl font-semibold">Panel</h1>
-        </div>
+        </div> */}
 
         <TabsList className="grid w-full grid-cols-2 md:w-auto">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
