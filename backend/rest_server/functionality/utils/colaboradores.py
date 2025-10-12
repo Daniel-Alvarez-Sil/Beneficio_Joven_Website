@@ -7,7 +7,8 @@ from ..serializers import (AltaNegocioYAdminSerializer, PromocionListSerializer,
 
 from django.db import transaction, IntegrityError
 
-from ..models import Promocion, Apartado
+from ..models import Promocion, Apartado, AdministradorNegocio
+from login.models import User
 
 from datetime import timedelta
 from django.utils import timezone
@@ -141,10 +142,21 @@ class EstadisticasNegocioView(APIView):
 
     def get(self, request, *args, **kwargs):
         # Accept id from query string (preferred) or JSON body (fallback)
-        payload = request.query_params if request.query_params else request.data
-        params = EstadisticasParamsSerializer(data=payload)
-        params.is_valid(raise_exception=True)
-        id_negocio = params.validated_data["id_negocio"]
+        # payload = request.query_params if request.query_params else request.data
+        # params = EstadisticasParamsSerializer(data=payload)
+        # params.is_valid(raise_exception=True)
+        # id_negocio = params.validated_data["id_negocio"]
+
+        id_administrador_negocio = request.user.id if request.user and request.user.is_authenticated else None
+        username = User.objects.get(id=id_administrador_negocio).username if id_administrador_negocio else None
+        print(username)
+        administradorNegocio = AdministradorNegocio.objects.get(usuario=username) 
+        if administradorNegocio:
+            print(administradorNegocio.id_negocio)
+        else:
+            return Response({"detail": "No se encontró el administrador de negocio."}, status=status.HTTP_404_NOT_FOUND)
+        id_negocio = administradorNegocio.id_negocio if administradorNegocio else None
+        print(id_negocio)
 
         # ---- Totals & rankings from Promocion.numero_canjeados ----
         promos_qs = Promocion.objects.filter(id_negocio=id_negocio)
