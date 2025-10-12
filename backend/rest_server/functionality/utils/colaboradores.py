@@ -28,16 +28,31 @@ class AdministradorNegocioCreateView(APIView):
         return Response(serializer.to_representation(result), status=status.HTTP_201_CREATED)
 
 # Petición para consumir promociones
-class PromocionListView(generics.ListAPIView):
-    queryset = Promocion.objects.only(
-        "id",
-        "nombre", "descripcion", "fecha_inicio", "fecha_fin",
-        "tipo", "porcentaje", "precio", "activo", "numero_canjeados"
-    )
-    serializer_class = PromocionListSerializer
-    permission_classes = [permissions.AllowAny]  # switch to IsAuthenticated if needed
-    pagination_class = None  # return ALL rows (no pagination)
+class PromocionListView(APIView):
 
+    permission_classes = [permissions.AllowAny]  # switch to IsAuthenticated if needed
+
+    def get(self, request, *args, **kwargs):
+        # Accept id from query string (preferred) or JSON body (fallback)
+        id_administrador_negocio = request.user.id if request.user and request.user.is_authenticated else None
+        username = User.objects.get(id=id_administrador_negocio).username if id_administrador_negocio else None
+        administradorNegocio = AdministradorNegocio.objects.get(usuario=username) 
+        if administradorNegocio:
+            print(administradorNegocio.id_negocio)
+        else:
+            return Response({"detail": "No se encontró el administrador de negocio."}, status=status.HTTP_404_NOT_FOUND)
+        id_negocio = administradorNegocio.id_negocio if administradorNegocio else None
+
+        promociones = Promocion.objects.filter(id_negocio=id_negocio).only(
+            "id",
+            "nombre", "descripcion", "fecha_inicio", "fecha_fin",
+            "tipo", "porcentaje", "precio", "activo", "numero_canjeados"
+        )
+
+        serializer = PromocionListSerializer(promociones, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+   
 
 # Petición para cambiar el estatus de una promoción (activar/desactivar)
 class PromocionUpdateView(APIView):
