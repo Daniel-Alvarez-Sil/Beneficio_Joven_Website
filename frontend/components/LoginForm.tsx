@@ -7,13 +7,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { AuthLayout } from "./AuthLayout";
 import type { LoginFormState } from "@/lib/definitions";
-
 import { useRouter } from 'next/navigation';
-
-// ...
-
-
-
 
 type ServerAction = (
   prevState: LoginFormState | null,
@@ -22,10 +16,10 @@ type ServerAction = (
 
 interface LoginFormProps {
   userType: 'admin' | 'colaborador';
-  /** Optional: if provided, <form action={action}> will invoke the server action (auth.ts: signup). */
+  /** Opcional: si se pasa, <form action={action}> invoca la server action (auth.ts: signup). */
   action?: ServerAction;
 
-  /** Fallback/on-legacy client handler (kept for backwards compatibility) */
+  /** Fallback legacy (compatibilidad hacia atrás) */
   onLogin?: (credentials: { email: string; password: string }) => void;
 
   onSwitchToRegister?: () => void;
@@ -41,7 +35,7 @@ function SubmitButton() {
     <Button
       type="submit"
       disabled={pending}
-      className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600"
+      className="w-full btn-gradient btn-apple"
     >
       {pending ? "Ingresando…" : "Iniciar sesión"}
     </Button>
@@ -60,87 +54,79 @@ export function LoginForm({
   titleOverride,
   subtitleOverride
 }: LoginFormProps) {
-  // Controlled inputs preserved (works fine with Server Actions as long as name=... is set)
+  // Controlled inputs (mantienen compat con Server Actions si name=... coincide)
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const router = useRouter();
 
-
-  // When a server action is provided, wire it up with useFormState:
-  const [state, formAction] = useFormState(action ?? (async (_prev, fd) => {
-    // Fallback to legacy onLogin if no server action is passed
-    onLogin?.({
-      email: (fd.get('username') as string) ?? '',
-      password: (fd.get('password') as string) ?? ''
-    });
-    // mimic server action shape
-    return { success: true } as LoginFormState;
-  }), initialState);
+  // Wire con server action o fallback onLogin
+  const [state, formAction] = useFormState(
+    action ?? (async (_prev, fd) => {
+      onLogin?.({
+        email: (fd.get('username') as string) ?? '',
+        password: (fd.get('password') as string) ?? ''
+      });
+      return { success: true } as LoginFormState;
+    }),
+    initialState
+  );
 
   useEffect(() => {
-  if (state?.success) {
-    // prefer replace to avoid going back to the login page with back button
-    router.replace(state.redirectTo ?? '/');
-  }
-}, [state?.success, state?.redirectTo, router]);
-
-  // Optional: client-side redirect if server action returns { success: true } and you don't use redirect() in auth.ts
-  // import { useRouter } from "next/navigation";
-  // const router = useRouter();
-  // useEffect(() => {
-  //   if (state?.success) router.push("/");
-  // }, [state?.success, router]);
+    if (state?.success) {
+      router.replace(state.redirectTo ?? '/');
+    }
+  }, [state?.success, state?.redirectTo, router]);
 
   const defaultTitle = userType === 'admin' ? 'INICIA SESIÓN' : 'COLABORADOR';
   const defaultSubtitle = userType === 'admin' ? 'Administrador' : 'Ingresa tus credenciales';
 
   const content = (
     <>
-      {/* IMPORTANT: match auth.ts -> expects fields 'username' and 'password' in FormData */}
+      {/* Importante: auth.ts espera 'username' y 'password' en el FormData */}
       <form action={formAction} className="space-y-4">
-        <div className="space-y-2">
+        <div className="space-y-2 text-white/80">
           <Label htmlFor="email">Usuario / Email</Label>
           <Input
             id="email"
-            // type="email"
-            name="username"              // <-- must be "username" to match auth.ts
-            // value={email}
+            name="username"
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full"
+            className="w-full input-apple text-white placeholder-white/50 caret-white"
+            autoComplete="username"
+            inputMode="email"
           />
-          {/* Field error (optional if your schema returns username errors) */}
           {state?.errors?.username?.length ? (
-            <p className="text-sm text-red-600">{state.errors.username[0]}</p>
+            <p className="text-sm text-red-500">{state.errors.username[0]}</p>
           ) : null}
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 text-white/80">
           <Label htmlFor="password">Contraseña</Label>
           <Input
             id="password"
             type="password"
-            name="password"             // <-- must be "password" to match auth.ts
+            name="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="w-full"
+            className="w-full input-apple text-white placeholder-white/50 caret-white"
+            autoComplete="current-password"
           />
-          {/* Field error */}
           {state?.errors?.password?.length ? (
-            <p className="text-sm text-red-600">{state.errors.password[0]}</p>
+            <p className="text-sm text-red-500">{state.errors.password[0]}</p>
           ) : null}
         </div>
 
-        {/* General/global error from server */}
         {state?.errors?.general?.length ? (
-          <p className="text-sm text-red-600">{state.errors.general[0]}</p>
+          <p className="text-sm text-red-500">{state.errors.general[0]}</p>
         ) : null}
-          <input
-            type="hidden"
-            name="redirectTo"
-            value={userType === 'admin' ? '/negocio' : '/colaborador'}
-          />
+
+        <input
+          type="hidden"
+          name="redirectTo"
+          value={userType === 'admin' ? '/negocio' : '/colaborador'}
+        />
+
         <SubmitButton />
       </form>
 
@@ -148,7 +134,7 @@ export function LoginForm({
         {onSwitchUserType && (
           <Button
             variant="outline"
-            className="w-full"
+            className="w-full h-12 rounded-xl"
             onClick={onSwitchUserType}
             type="button"
           >
@@ -159,7 +145,7 @@ export function LoginForm({
         {onSwitchToRegister && userType === 'colaborador' && (
           <Button
             variant="ghost"
-            className="w-full"
+            className="w-full h-12 rounded-xl text-white"
             onClick={onSwitchToRegister}
             type="button"
           >

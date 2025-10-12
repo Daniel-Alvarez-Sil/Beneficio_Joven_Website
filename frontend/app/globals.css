@@ -1,8 +1,18 @@
+/* =========================================================
+   GLOBALS.CSS (unificado)
+   - Tailwind + tema OKLCH
+   - Aurora background + glassmorphism
+   - Tipografía Inter + textos claros en Auth
+   - Inputs/botón estilo Apple
+   ========================================================= */
+
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* -------- Variant helper -------- */
 @custom-variant dark (&:is(.dark *));
 
+/* -------- Theme map para Tailwind tokens -------- */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -43,31 +53,43 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* -------- Paleta base (modo claro) -------- */
 :root {
   --radius: 0.625rem;
+
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
+
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
+
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
+
   --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
+
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
+
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
+
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
+
   --destructive: oklch(0.577 0.245 27.325);
+
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
+
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
+
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -76,32 +98,49 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Apple-ish base vars (usadas por glass/inputs/botón) */
+  --blur-apple: 18px;
+  --glass-bg: rgba(255, 255, 255, 0.08);
+  --glass-brd: rgba(255, 255, 255, 0.18);
+  --ring-apple: 0 0 0 3px rgba(59, 130, 246, .35);
 }
 
+/* -------- Paleta modo oscuro -------- */
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
+
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
+
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
+
   --primary: oklch(0.922 0 0);
   --primary-foreground: oklch(0.205 0 0);
+
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
+
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
+
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
+
   --destructive: oklch(0.704 0.191 22.216);
+
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
+
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
+
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -112,23 +151,33 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* -------- Base layer Tailwind -------- */
 @layer base {
+  /* Tipografía Inter global */
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans", sans-serif;
   }
 }
 
-/* ==== Auth background helpers ==== */
+/* =========================================================
+   AUTH: fondo, partículas, card y estilos Apple-ish
+   ========================================================= */
+
+/* --- Wrapper para aislar fondos --- */
 .auth-bg {
   position: relative;
   isolation: isolate;
 }
 
+/* Radial glows sutiles detrás (para páginas sin aurora) */
 .auth-bg::before {
-  /* radial glow atrás */
   content: "";
   position: absolute;
   inset: -20%;
@@ -140,7 +189,46 @@
   z-index: -2;
 }
 
-/* sutil grid */
+/* Aurora full-bleed (tipo iCloud) */
+.auth-aurora {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  z-index: -2;
+  background:
+    radial-gradient(1200px 600px at 20% 10%, #60a5fa22, transparent 60%),
+    radial-gradient(1000px 700px at 80% 20%, #34d39922, transparent 60%),
+    radial-gradient(700px 700px at 50% 80%, #a78bfa22, transparent 60%),
+    linear-gradient(180deg, #0b0f1a, #0a0d14);
+}
+
+/* Ruido muy suave encima (acabado premium) */
+.auth-aurora::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='130' height='130' viewBox='0 0 130 130'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.75' numOctaves='2' seed='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/ filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  mix-blend-mode: soft-light;
+  z-index: -1;
+}
+
+/* Estrellas/partículas (opcional) */
+.auth-stars {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(1px 1px at 20% 30%, #fff8 50%, transparent 51%),
+    radial-gradient(1px 1px at 70% 20%, #fff8 50%, transparent 51%),
+    radial-gradient(1px 1px at 40% 80%, #fff8 50%, transparent 51%),
+    radial-gradient(1px 1px at 85% 65%, #fff8 50%, transparent 51%);
+  opacity: .5;
+}
+
+/* Dot grid sutil (si lo usas) */
 .bg-dots {
   background-image: radial-gradient(var(--border) 1px, transparent 1px);
   background-size: 16px 16px;
@@ -148,18 +236,89 @@
   opacity: 0.35;
 }
 
-/* glassmorphism */
+/* Card de vidrio (única definición) */
 .glass {
-  backdrop-filter: saturate(1.2) blur(8px);
-  background: color-mix(in oklch, var(--card) 75%, transparent);
-  box-shadow: 0 10px 30px hsl(0 0% 0% / 0.08);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--blur-apple));
+  -webkit-backdrop-filter: blur(var(--blur-apple));
+  border: 1px solid var(--glass-brd);
+  box-shadow:
+    0 10px 30px rgba(0,0,0,.35),
+    inset 0 1px 0 rgba(255,255,255,.10);
 }
 
-/* gradient re-usable */
+/* Forzamos textos claros dentro del card de Auth */
+.auth-card :where(h1,h2,h3,h4,h5,h6,p,span,li,small,strong,label) {
+  color: var(--foreground); /* en dark = blanco */
+}
+
+/* Labels un poco más suaves */
+.auth-card label {
+  color: color-mix(in oklch, var(--foreground) 80%, transparent);
+  font-weight: 500;
+}
+
+/* Inputs Apple-ish */
+.input-apple {
+  height: 3rem;
+  border-radius: 0.9rem;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.16);
+  backdrop-filter: blur(10px);
+  color: var(--foreground);
+  transition: box-shadow .15s ease, background .15s ease, border-color .15s ease;
+}
+.input-apple::placeholder {
+  color: oklch(0.708 0 0); /* gris claro en dark */
+}
+.input-apple:focus {
+  outline: none;
+  box-shadow: var(--ring-apple);
+  background: rgba(255,255,255,.08);
+}
+
+/* Botón gradiente estilo iCloud */
 .btn-gradient {
-  background-image: linear-gradient(90deg, var(--chart-2), var(--chart-3));
+  background-image: linear-gradient(180deg, #60a5fa, #3b82f6);
 }
 .btn-gradient:hover {
-  filter: brightness(0.98);
+  filter: brightness(1.05);
   transform: translateY(-0.5px);
 }
+.btn-apple {
+  height: 3rem;
+  border-radius: 1rem;
+  font-weight: 600;
+  letter-spacing: .01em;
+  box-shadow: 0 8px 20px rgba(59, 130, 246, .25);
+  transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+}
+.btn-apple:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 10px rgba(59, 130, 246, .25);
+}
+
+/* Animación para toasts */
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(.98); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.animate-fade-in { animation: fadeIn .25s ease-out both; }
+
+/* Preferencias en modo claro (ajustes finos) */
+@media (prefers-color-scheme: light) {
+  :root {
+    --glass-bg: rgba(255, 255, 255, 0.55);
+    --glass-brd: rgba(255, 255, 255, 0.6);
+    --ring-apple: 0 0 0 3px rgba(37, 99, 235, .25);
+  }
+}
+
+/* Fuerza color blanco en los títulos/subtítulos del card de auth */
+.auth-title { color: #fff !important; }
+.auth-subtitle { color: rgba(255,255,255,.72) !important; }
+
+/* Si Tailwind o otro estilo está imponiendo color en h1/h2 dentro del card,
+   esto asegura que los encabezados sean blancos en Auth */
+.auth-card h1.auth-title,
+.auth-card h2.auth-title { color: #fff !important; }

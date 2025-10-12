@@ -45,50 +45,50 @@ export function RegisterAdminNegocioForm() {
   };
 
   const goToStep2 = () => {
-    // NO fetch, NO server action, NO POST — solo navegación
+    // Sólo navegación al paso 2 (sin POST aquí)
     router.push('/registro/negocio');
   };
 
   return (
     <AuthLayout title="REGISTRO (Paso 1)" subtitle="Administrador del negocio">
-      {/* Importante: SIN <form> */}
+      {/* Importante: sin <form> para evitar submit accidental */}
       <div className="space-y-4" onKeyDown={blockEnter}>
         <div className="grid md:grid-cols-2 gap-4">
-          <div className="space-y-2">
+          <div className="space-y-2 text-white">
             <Label htmlFor="nombre">Nombre</Label>
-            <Input id="nombre" value={form.nombre} onChange={(e) => onChange('nombre', e.target.value)} required />
+            <Input id="nombre" value={form.nombre} onChange={(e) => onChange('nombre', e.target.value)} required className="input-apple text-white placeholder-white/50 caret-white text-white placeholder-white/50 caret-white" />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 text-white">
             <Label htmlFor="apellido_paterno">Apellido paterno</Label>
-            <Input id="apellido_paterno" value={form.apellido_paterno} onChange={(e) => onChange('apellido_paterno', e.target.value)} required />
+            <Input id="apellido_paterno" value={form.apellido_paterno} onChange={(e) => onChange('apellido_paterno', e.target.value)} required className="input-apple text-white placeholder-white/50 caret-white text-white placeholder-white/50 caret-white" />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 text-white">
             <Label htmlFor="apellido_materno">Apellido materno</Label>
-            <Input id="apellido_materno" value={form.apellido_materno} onChange={(e) => onChange('apellido_materno', e.target.value)} required />
+            <Input id="apellido_materno" value={form.apellido_materno} onChange={(e) => onChange('apellido_materno', e.target.value)} required className="input-apple text-white placeholder-white/50 caret-white text-white placeholder-white/50 caret-white" />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 text-white">
             <Label htmlFor="telefono">Teléfono</Label>
-            <Input id="telefono" value={form.telefono} onChange={(e) => onChange('telefono', e.target.value)} required />
+            <Input id="telefono" value={form.telefono} onChange={(e) => onChange('telefono', e.target.value)} required className="input-apple text-white placeholder-white/50 caret-white" />
           </div>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 text-white">
           <Label htmlFor="correo">Correo</Label>
-          <Input id="correo" type="email" value={form.correo} onChange={(e) => onChange('correo', e.target.value)} required />
+          <Input id="correo" type="email" value={form.correo} onChange={(e) => onChange('correo', e.target.value)} required className="input-apple text-white placeholder-white/50 caret-white" />
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid md:grid-cols-2 gap-4 text-white">
           <div className="space-y-2">
             <Label htmlFor="usuario">Usuario</Label>
-            <Input id="usuario" value={form.usuario} onChange={(e) => onChange('usuario', e.target.value)} required />
+            <Input id="usuario" value={form.usuario} onChange={(e) => onChange('usuario', e.target.value)} required className="input-apple text-white placeholder-white/50 caret-white" autoComplete="username" />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 text-white">
             <Label htmlFor="contrasena">Contraseña</Label>
-            <Input id="contrasena" type="password" value={form.contrasena} onChange={(e) => onChange('contrasena', e.target.value)} required />
+            <Input id="contrasena" type="password" value={form.contrasena} onChange={(e) => onChange('contrasena', e.target.value)} required className="input-apple text-white placeholder-white/50 caret-white" autoComplete="new-password" />
           </div>
         </div>
 
-        <Button type="button" onClick={goToStep2} className="w-full btn-gradient text-white">
+        <Button type="button" onClick={goToStep2} className="w-full btn-gradient btn-apple text-white">
           Continuar al Paso 2
         </Button>
       </div>
