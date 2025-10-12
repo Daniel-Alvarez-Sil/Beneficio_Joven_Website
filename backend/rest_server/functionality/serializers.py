@@ -59,10 +59,10 @@ class AltaNegocioYAdminSerializer(serializers.Serializer):
         )
 
         # 4) Crear solicitud de negocio pendiente
-        # solicitud = SolicitudNegocio.objects.create(
-        #     id_negocio=negocio,
-        #     estatus="PENDIENTE"
-        # )
+        solicitud = SolicitudNegocio.objects.create(
+            id_negocio=negocio,
+            estatus="PENDIENTE"
+        )
 
         # Devolvemos los tres para serializar una respuesta útil
         return {"negocio": negocio, "administrador": admin}
@@ -190,3 +190,17 @@ class PromocionCreateSerializer(serializers.ModelSerializer):
 
 class EstadisticasParamsSerializer(serializers.Serializer):
     id_negocio = serializers.IntegerField(min_value=1)
+
+
+class NegocioMiniSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Negocio
+        fields = ("id", "nombre", "correo", "telefono", "estatus")
+
+class SolicitudNegocioSerializer(serializers.ModelSerializer):
+    # Nested read-only data about the negocio
+    negocio = NegocioMiniSerializer(source="id_negocio", read_only=True)
+
+    class Meta:
+        model = SolicitudNegocio
+        fields = ("id", "estatus", "id_negocio", "negocio")

@@ -1,7 +1,8 @@
 from django.urls import path
 from .views import (AdministradorNegocioCreateView, PromocionListView, 
                     PromocionDeleteView, PromocionUpdateView, PromocionCreateView, 
-                    EstadisticasNegocioView)
+                    EstadisticasNegocioView, 
+                    SolicitudNegocioListView)
 
 urlpatterns = [
     path("administradores-negocio/", AdministradorNegocioCreateView.as_view(), name="administrador-negocio-create"),
@@ -10,4 +11,5 @@ urlpatterns = [
     path("promociones/update/", PromocionUpdateView.as_view(), name="promocion-update"),
     path("promociones/create/", PromocionCreateView.as_view(), name="promocion-create"),
     path("promociones/estadisticas/", EstadisticasNegocioView.as_view(), name="estadisticas-negocio"),
+    path("solicitudes-negocio/list/", SolicitudNegocioListView.as_view(), name="solicitudes-negocio-list"),
 ]
