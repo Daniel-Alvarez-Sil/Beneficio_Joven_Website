@@ -2,7 +2,8 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
-from .models import AdministradorNegocio, Negocio, SolicitudNegocio # ajusta import
+from .models import AdministradorNegocio, Negocio, SolicitudNegocio, Promocion # ajusta import
+
 
 class NegocioCreateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -113,12 +114,79 @@ class PromocionListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Promocion
         fields = (
-            "titulo",
+            "id", 
+            "nombre",
             "descripcion",
-            "inicio_promocion",
-            "final_promocion",
+            "fecha_inicio",
+            "fecha_fin",
             "tipo",
-            "monto",
-            "estatus",
+            "porcentaje",
+            "precio",
+            "activo",
             "numero_canjeados",
         )
+
+class DeleteUpdatePromocionSerializer(serializers.Serializer):
+    id_promocion = serializers.IntegerField(min_value=1)
+
+class PromocionCreateSerializer(serializers.ModelSerializer):
+    # Accept FK IDs directly
+    id_administrador_negocio = serializers.PrimaryKeyRelatedField(
+        queryset=AdministradorNegocio.objects.all(), required=False, allow_null=True
+    )
+    id_negocio = serializers.PrimaryKeyRelatedField(
+        queryset=Negocio.objects.all(), required=False, allow_null=True
+    )
+    # Default 0 if not provided
+    numero_canjeados = serializers.IntegerField(required=False, min_value=0, default=0)
+
+    class Meta:
+        model = Promocion
+        # Fields you can send in the request
+        fields = (
+            "id_administrador_negocio",
+            "id_negocio",
+            "nombre",
+            "descripcion",
+            "limite_por_usuario",
+            "limite_total",
+            "fecha_inicio",
+            "fecha_fin",
+            "imagen",
+            "numero_canjeados",
+            "tipo",
+            "porcentaje",
+            "precio",
+            "activo",
+        )
+        read_only_fields = ()  # "fecha_creado" is auto; no need to send it
+
+    def validate(self, attrs):
+        # fecha_inicio <= fecha_fin
+        fi = attrs.get("fecha_inicio")
+        ff = attrs.get("fecha_fin")
+        if fi and ff and fi > ff:
+            raise serializers.ValidationError({"fecha_fin": "Debe ser posterior a fecha_inicio."})
+
+        # Simple pricing logic
+        tipo = attrs.get("tipo")
+        porcentaje = attrs.get("porcentaje")
+        precio = attrs.get("precio")
+
+        if tipo == "porcentaje":
+            if porcentaje is None:
+                raise serializers.ValidationError({"porcentaje": "Requerido cuando tipo='porcentaje'."})
+            # 0 < porcentaje <= 100
+            if porcentaje <= 0 or porcentaje > 100:
+                raise serializers.ValidationError({"porcentaje": "Debe estar entre 0 y 100."})
+        elif tipo == "precio":
+            if precio is None:
+                raise serializers.ValidationError({"precio": "Requerido cuando tipo='precio'."})
+            if precio < 0:
+                raise serializers.ValidationError({"precio": "No puede ser negativo."})
+        # if you allow other tipos, drop the above branching
+
+        return attrs
+
+class EstadisticasParamsSerializer(serializers.Serializer):
+    id_negocio = serializers.IntegerField(min_value=1)
