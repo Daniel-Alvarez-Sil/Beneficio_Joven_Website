@@ -14,6 +14,8 @@ from datetime import timedelta
 from django.utils import timezone
 from django.db.models import Sum
 
+from ..models import Promocion
+
 
 # Solicitud para crear un Negocio y su AdministradorNegocio asociado
 class AdministradorNegocioCreateView(APIView):
@@ -122,19 +124,18 @@ class PromocionDeleteView(APIView):
 
 
 # Petición para añadir una promoción 
+# class PromocionCreateView(generics.CreateAPIView):
+#     """
+#     POST /functionality/promociones/
+#     Body: JSON with the fields defined in PromocionCreateSerializer.
+#     """
+#     queryset = Promocion.objects.all()
+#     serializer_class = PromocionCreateSerializer
+#     permission_classes = [permissions.AllowAny]  # switch to IsAuthenticated if needed
 
-class PromocionCreateView(generics.CreateAPIView):
-    """
-    POST /functionality/promociones/
-    Body: JSON with the fields defined in PromocionCreateSerializer.
-    """
-    queryset = Promocion.objects.all()
-    serializer_class = PromocionCreateSerializer
-    permission_classes = [permissions.AllowAny]  # switch to IsAuthenticated if needed
-
-    @transaction.atomic
-    def post(self, request, *args, **kwargs):
-        return super().post(request, *args, **kwargs)
+#     @transaction.atomic
+#     def post(self, request, *args, **kwargs):
+#         return super().post(request, *args, **kwargs)
 
 
 # Petición para consumir estadísticas 
@@ -232,3 +233,10 @@ class EstadisticasNegocioView(APIView):
             "5_promociones_con_menos_canjes": bottom5_out,
         }
         return Response(data, status=status.HTTP_200_OK)
+
+
+class PromocionCreateView(generics.CreateAPIView):
+    queryset = Promocion.objects.all()
+    serializer_class = PromocionCreateSerializer
+    # Adjust permissions as needed
+    permission_classes = [permissions.IsAuthenticated]  # or [permissions.AllowAny]

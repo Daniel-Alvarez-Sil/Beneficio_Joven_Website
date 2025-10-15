@@ -3,11 +3,25 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { LogOut, Gift, Loader2 } from "lucide-react";
+import { Switch } from "./ui/switch";
+import { Button } from "./ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "./ui/alert-dialog";
+import { Gift, Loader2, Trash2 } from "lucide-react";
+
 import { logout } from "@/actions/login/auth";
 import { getPromociones, type Promocion } from "@/actions/colaboradores/get-promociones";
-
-import { ColaboradorHeader } from "./ColaboradorHeader";
+import { cambiarEstatusPromocion } from "@/actions/colaboradores/update-estatus-promocion";
+import { deletePromocion } from "@/actions/colaboradores/delete-promocion"; // ⬅️ your delete service
 
 interface ColaboradorDashboardProps {
   onLogout: () => void;
@@ -48,6 +62,8 @@ export function ColaboradorPromociones({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [promos, setPromos] = useState<Promocion[]>([]);
+  const [busyId, setBusyId] = useState<number | null>(null); // toggle status busy
+  const [deletingId, setDeletingId] = useState<number | null>(null); // delete busy
 
   useEffect(() => {
     let mounted = true;
@@ -70,21 +86,54 @@ export function ColaboradorPromociones({
     };
   }, [idNegocio]);
 
+  const handleToggleActivo = async (id: number) => {
+    setError(null);
+    setBusyId(id);
+
+    // optimistic flip
+    setPromos((prev) => prev.map((p) => (p.id === id ? { ...p, activo: !p.activo } : p)));
+
+    const ok = await cambiarEstatusPromocion(id);
+
+    if (!ok) {
+      // rollback on failure
+      setPromos((prev) => prev.map((p) => (p.id === id ? { ...p, activo: !p.activo } : p)));
+      setError("No se pudo cambiar el estatus. Intenta de nuevo.");
+    }
+
+    setBusyId(null);
+  };
+
+  const handleDelete = async (id: number) => {
+    setError(null);
+    setDeletingId(id);
+    const ok = await deletePromocion(id);
+
+    if (ok) {
+      setPromos((prev) => prev.filter((p) => p.id !== id));
+    } else {
+      setError("No se pudo borrar la promoción. Intenta de nuevo.");
+    }
+
+    setDeletingId(null);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-      {/* Header */}
-
-      {/* Content */}
       <main className="max-w-7xl mx-auto px-4 py-6">
         <h2 className="text-lg font-medium mb-4">Promociones</h2>
+
+        {error ? (
+          <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            {error}
+          </div>
+        ) : null}
 
         {loading ? (
           <div className="flex items-center justify-center py-16 text-muted-foreground">
             <Loader2 className="w-5 h-5 mr-2 animate-spin" />
             Cargando promociones...
           </div>
-        ) : error ? (
-          <div className="py-10 text-center text-sm text-red-600">{error}</div>
         ) : promos.length === 0 ? (
           <div className="py-10 text-center text-sm text-muted-foreground">
             No hay promociones por mostrar.
@@ -97,14 +146,66 @@ export function ColaboradorPromociones({
             {promos.map((p) => {
               const inicio = formatDateMX(p.fecha_inicio);
               const fin = formatDateMX(p.fecha_fin);
+              const isBusy = busyId === p.id || deletingId === p.id;
 
               return (
                 <Card key={p.id} className="hover:shadow-md transition-shadow">
                   <CardHeader className="flex flex-row items-start justify-between space-y-0">
-                    <CardTitle className="text-base">{p.nombre}</CardTitle>
-                    <Badge variant={p.activo ? "default" : "secondary"}>
-                      {p.activo ? "Activo" : "Inactivo"}
-                    </Badge>
+                    <div className="space-y-1">
+                      <CardTitle className="text-base">{p.nombre}</CardTitle>
+                      <Badge variant={p.activo ? "default" : "secondary"}>
+                        {p.activo ? "Activo" : "Inactivo"}
+                      </Badge>
+                    </div>
+
+                    {/* Right controls: Toggle + Delete */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground select-none">Estatus</span>
+                      <Switch
+                        checked={p.activo}
+                        onCheckedChange={() => handleToggleActivo(p.id)}
+                        disabled={isBusy}
+                        aria-label={`Cambiar estatus de ${p.nombre}`}
+                      />
+                      {/* Delete button + confirm */}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="hover:bg-red-50"
+                            aria-label={`Borrar promoción ${p.nombre}`}
+                            title="Borrar promoción"
+                            disabled={isBusy}
+                          >
+                            {deletingId === p.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4 text-red-600" />
+                            )}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              ¿Borrar “{p.nombre}”?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Esta acción no se puede deshacer. Se eliminará la promoción de forma permanente.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              className="bg-red-600 hover:bg-red-700"
+                              onClick={() => handleDelete(p.id)}
+                            >
+                              Borrar
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </CardHeader>
 
                   <CardContent className="space-y-3">

@@ -1,1 +1,15 @@
-.venv
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# (optional) virtualenvs
+.venv/
+venv/
+env/
+
+# (optional) Django dev artifacts
+*.log
+db.sqlite3  # if it's only for local dev
+# Ignore your collectstatic output dir (adjust to your STATIC_ROOT)
+staticfiles/
