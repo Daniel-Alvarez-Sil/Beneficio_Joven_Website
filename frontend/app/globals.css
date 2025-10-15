@@ -284,7 +284,9 @@
   background: rgba(255,255,255,.06);
   border: 1px solid rgba(255,255,255,.16);
   backdrop-filter: blur(10px);
-  color: var(--foreground);
+  color: #fff; /* 👈 texto blanco */
+  caret-color: #fff; /* 👈 cursor blanco */
+  /* color: var(--foreground); */
   transition: box-shadow .15s ease, background .15s ease, border-color .15s ease;
 }
 .input-apple::placeholder {
@@ -341,3 +343,17 @@
    esto asegura que los encabezados sean blancos en Auth */
 .auth-card h1.auth-title,
 .auth-card h2.auth-title { color: #fff !important; }
+
+/* Forzar modo "claro" en gráficos sobre fondo oscuro */
+.chart-dark .recharts-text tspan { fill: #fff !important; }            /* ticks, labels */
+.chart-dark .recharts-cartesian-axis-line,
+.chart-dark .recharts-cartesian-axis-tick-line { stroke: #ffffff33 !important; }
+.chart-dark .recharts-cartesian-grid-horizontal line { stroke: #ffffff1f !important; }
+.chart-dark .recharts-legend-item-text { color: #fff !important; fill: #fff !important; }
+.chart-dark .recharts-legend-wrapper { color: #fff !important; }
+
+.chart-dark .recharts-default-tooltip {
+  background: rgba(20,22,30,.92) !important;
+  border: 1px solid rgba(255,255,255,.15) !important;
+  color: #fff !important;
+}

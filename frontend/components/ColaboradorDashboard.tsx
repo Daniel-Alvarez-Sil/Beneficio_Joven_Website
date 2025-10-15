@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { LogOut, Loader2, RefreshCw, TrendingUp } from "lucide-react"
 import { logout } from "@/actions/login/auth"
+import { Legend } from "recharts"
 
 import {
   ChartContainer,
@@ -107,26 +108,49 @@ export function ColaboradorDashboard({
    * Agrupamos por YYYY-MM-DD
    */
   const historicoData = useMemo(() => {
-    const src = stats?.historico_de_canjes_ultimos_siete_dias ?? []
-    const byDate = new Map<string, { date: string; canjes: number; monto_total_descuento: number }>()
+  const src = stats?.historico_de_canjes_ultimos_siete_dias ?? [];
+  const byDate = new Map<string, { date: string; canjes: number; monto_total_descuento: number }>();
 
-    for (const item of src) {
-      for (const [fechaHora, value] of Object.entries(item)) {
-        const dateObj = new Date(fechaHora)
-        const key = Number.isNaN(dateObj.getTime())
-          ? String(fechaHora).slice(0, 10)
-          : dateObj.toISOString().slice(0, 10)
-
-        const monto = Array.isArray(value) ? Number(value[1] ?? 0) : 0
-        const current = byDate.get(key) ?? { date: key, canjes: 0, monto_total_descuento: 0 }
-        current.canjes += 1
-        current.monto_total_descuento += Number.isFinite(monto) ? monto : 0
-        byDate.set(key, current)
+  for (const item of src) {
+    // 1) Caso A: formato tipo { fecha_hora: ISO, titulo: string, monto_descuento: number }
+    if (
+      item &&
+      typeof item === "object" &&
+      "fecha_hora" in item &&
+      (typeof (item as any).fecha_hora === "string" || (item as any).fecha_hora instanceof Date)
+    ) {
+      const iso = String((item as any).fecha_hora);
+      const d = new Date(iso);
+      if (!Number.isNaN(d.getTime())) {
+        const key = d.toISOString().slice(0, 10); // YYYY-MM-DD
+        const monto = Number((item as any).monto_descuento ?? 0);
+        const prev = byDate.get(key) ?? { date: key, canjes: 0, monto_total_descuento: 0 };
+        prev.canjes += 1;
+        prev.monto_total_descuento += Number.isFinite(monto) ? monto : 0;
+        byDate.set(key, prev);
       }
+      continue;
     }
 
-    return Array.from(byDate.values()).sort((a, b) => (a.date < b.date ? -1 : 1))
-  }, [stats])
+    // 2) Caso B: formato tipo { "ISO-date": [titulo, monto] }
+    //    Iteramos las entradas y tomamos solo las que sean fecha ISO válida
+    for (const [k, v] of Object.entries(item ?? {})) {
+      const d = new Date(k);
+      if (Number.isNaN(d.getTime())) continue; // ignora claves como "titulo"
+      const key = d.toISOString().slice(0, 10);
+      const monto = Array.isArray(v) ? Number(v[1] ?? 0) : 0;
+      const prev = byDate.get(key) ?? { date: key, canjes: 0, monto_total_descuento: 0 };
+      prev.canjes += 1;
+      prev.monto_total_descuento += Number.isFinite(monto) ? monto : 0;
+      byDate.set(key, prev);
+    }
+  }
+
+  // Ordena por fecha ascendente y filtra cualquier basura
+  const arr = Array.from(byDate.values()).filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x.date));
+  arr.sort((a, b) => (a.date < b.date ? -1 : 1));
+  return arr;
+}, [stats]);
 
   // =========================
   // Chart configs (SHADCN)
@@ -214,7 +238,9 @@ export function ColaboradorDashboard({
             </CardHeader>
             <CardContent>
               <div className="text-4xl font-bold tracking-tight text-white/70">
-                {loading || historicoData.length === 0 ? "—" : `${fmtDateShort(historicoData[0].date)} – ${fmtDateShort(historicoData[historicoData.length - 1].date)}`}
+                {loading || historicoData.length === 0
+                  ? "—"
+                  : `${fmtDateShort(historicoData[0].date)} – ${fmtDateShort(historicoData[historicoData.length - 1].date)}`}
               </div>
               <p className="text-xs text-white/60 mt-2">Últimos 7 días con actividad.</p>
             </CardContent>
@@ -236,7 +262,8 @@ export function ColaboradorDashboard({
                 style={
                   {
                     // colores de serie (rechart usa estos CSS vars del shadcn container)
-                    ["--color-canjes" as any]: "hsl(var(--chart-1))",
+                    // ["--color-canjes" as any]: "hsl(var(--chart-1))",
+                    "--color-canjes": "#38bdf8",
                   } as React.CSSProperties
                 }
               >
@@ -276,11 +303,13 @@ export function ColaboradorDashboard({
             <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
               <ChartContainer
                 config={areaConfig}
-                className="aspect-auto h-[260px] w-full"
+                className="chart-dark aspect-auto h-[260px] w-full"
                 style={
                   {
-                    ["--color-canjes" as any]: "hsl(var(--chart-1))",
-                    ["--color-monto_total_descuento" as any]: "hsl(var(--chart-2))",
+                    // ["--color-canjes" as any]: "hsl(var(--chart-1))",
+                    // ["--color-monto_total_descuento" as any]: "hsl(var(--chart-2))",
+                    "--color-canjes": "#38bdf8",
+                    "--color-monto_total_descuento": "#a056ebff",
                   } as React.CSSProperties
                 }
               >
@@ -295,9 +324,12 @@ export function ColaboradorDashboard({
                       <stop offset="95%" stopColor="var(--color-monto_total_descuento)" stopOpacity={0.1} />
                     </linearGradient>
                   </defs>
+                  
+                  {/* Líneas del fondo */}
+                  {/* <CartesianGrid vertical={false} stroke="rgba(255,255,255,.12)" /> */}
+                  <CartesianGrid stroke="rgba(255,255,255,0.1)" vertical={false} />
 
-                  <CartesianGrid vertical={false} stroke="rgba(255,255,255,.12)" />
-
+                  {/* Eje X (fechas) */}
                   <XAxis
                     dataKey="date"
                     tickLine={false}
@@ -312,10 +344,25 @@ export function ColaboradorDashboard({
                     }}
                   />
 
+                  {/* Eje Y (valores) */}
+                  <YAxis
+                    tickLine={false}
+                    axisLine={{ stroke: 'rgba(255,255,255,0.2)' }}
+                    tick={{ fill: '#ffffffcc', fontSize: 12 }}
+                    allowDecimals={false}
+                  />
+
+                  {/* Tooltip (al pasar el mouse) */}
                   <ChartTooltip
                     cursor={false}
                     content={
                       <ChartTooltipContent
+                        contentStyle={{
+                          backgroundColor: 'rgba(30,30,40,0.9)',
+                          border: '1px solid rgba(255,255,255,0.15)',
+                          color: '#fff',
+                        }}
+                        labelStyle={{ color: '#fff' }}
                         labelFormatter={(value) => {
                           const d = new Date(String(value))
                           return d.toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short", year: "numeric" })
@@ -331,6 +378,10 @@ export function ColaboradorDashboard({
                       />
                     }
                   />
+
+                  {/* Leyenda (parte inferior) */}
+                  <ChartLegend content={<ChartLegendContent />} />
+                  <Legend wrapperStyle={{ color: '#ffffffcc' }} />
 
                   <Area
                     dataKey="monto_total_descuento"

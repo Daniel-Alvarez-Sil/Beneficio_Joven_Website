@@ -19,35 +19,75 @@ export default function App() {
 
   const handleLogout = () => {
     setCurrentUser(null);
-    router.push('/'); // adjust if you have a specific login route
+    router.push('/');
   };
 
   return (
-    <div className="container mx-auto max-w-6xl py-6">
+    <div className="relative min-h-screen text-white">
+      {/* Fondo aurora si quieres repetir el look del login */}
+      <div className="auth-aurora" />
+      <div className="auth-stars" />
+
       <ColaboradorHeader />
-      <Tabs defaultValue="dashboard" className="w-full">
-        {/* <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">Panel</h1>
-        </div> */}
 
-        <TabsList className="grid w-full grid-cols-2 md:w-auto">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="promos">Promociones</TabsTrigger>
-        </TabsList>
+      <main className="max-w-7xl mx-auto px-4 mt-6 md:mt-8 pb-10">
+        <Tabs defaultValue="dashboard" className="w-full">
+          {/* Tabs estilo píldora glass */}
+          <TabsList
+            className="
+              flex w-fit mx-auto
+              rounded-2xl
+              bg-white/10 backdrop-blur
+              border border-white/20
+              p-1.5 gap-2
+              shadow-sm
+            "
+            aria-label="Navegación del panel"
+          >
+            <TabsTrigger
+              value="dashboard"
+              className="
+                rounded-xl px-6 py-3
+                text-sm font-medium text-white/85
+                data-[state=active]:bg-white/25
+                data-[state=active]:text-white
+                hover:bg-white/15
+                transition-all
+              "
+            >
+              Dashboard
+            </TabsTrigger>
 
-        <TabsContent value="dashboard" className="mt-4">
-          <ColaboradorDashboard
-            onLogout={handleLogout}
-            colaboradorName={currentUser?.name ?? 'Colaborador'}
-          />
-        </TabsContent>
+            <TabsTrigger
+              value="promos"
+              className="
+                rounded-xl px-6 py-3
+                text-sm font-medium text-white/85
+                data-[state=active]:bg-white/25
+                data-[state=active]:text-white
+                hover:bg-white/15
+                transition-all
+              "
+            >
+              Promociones
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="promos" className="mt-4">
-          <ColaboradorPromociones
-            colaboradorName={'Colaborador'}
-          />
-        </TabsContent>
-      </Tabs>
+          {/* Contenido */}
+          <TabsContent value="dashboard" className="mt-8">
+            <ColaboradorDashboard
+              onLogout={handleLogout}
+              colaboradorName={currentUser?.name ?? 'Colaborador'}
+            />
+          </TabsContent>
+
+          <TabsContent value="promos" className="mt-8">
+            <ColaboradorPromociones
+              colaboradorName={currentUser?.name ?? 'Colaborador'}
+            />
+          </TabsContent>
+        </Tabs>
+      </main>
     </div>
   );
 }
