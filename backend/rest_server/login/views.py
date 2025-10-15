@@ -13,6 +13,7 @@ from oauth2_provider.models import AccessToken
 from oauth2_provider.contrib.rest_framework import TokenHasReadWriteScope
 from .models import User
 
+from .serializers import UsuarioRegisterSerializer
 
 
 # Login View
@@ -120,3 +121,14 @@ class RefreshTokenView(APIView):
             return Response(response.json(), status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid credentials'}, status=response.status_code)
+
+
+# View to register a new 'usuario' user
+class UsuarioRegisterAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = UsuarioRegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.save()
+        return Response(data, status=status.HTTP_201_CREATED)
