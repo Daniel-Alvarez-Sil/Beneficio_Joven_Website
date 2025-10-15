@@ -4,7 +4,7 @@ import { verifyRole } from './lib/login/dal'
  
 // 1. Specify protected and public routes
 // const protectedRoutes = ['/dashboard', '/prayers']
-const publicRoutes = ['/registro', '/registro/colaborador', '/registro/negocio', '/administrador']
+const publicRoutes = ['/registro', '/registro/colaborador', '/registro/negocio']
  
 export default async function middleware(req: NextRequest) {
   // 2. Check if the current route is protected or public
@@ -39,7 +39,7 @@ export default async function middleware(req: NextRequest) {
     const role = await verifyRole()
     if (role?.role === 'colaborador')
       return NextResponse.redirect(new URL('/colaborador', req.nextUrl))
-    return NextResponse.redirect(new URL('/negocio', req.nextUrl))
+    return NextResponse.redirect(new URL('/administrador', req.nextUrl))
 
   }
  

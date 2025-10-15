@@ -124,7 +124,7 @@ export function LoginForm({
         <input
           type="hidden"
           name="redirectTo"
-          value={userType === 'admin' ? '/negocio' : '/colaborador'}
+          value={userType === 'admin' ? '/administrador' : '/colaborador'}
         />
 
         <SubmitButton />
