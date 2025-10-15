@@ -178,7 +178,7 @@ class Suscripcion(models.Model):
 
 
 class Usuario(models.Model):
-    id = models.BigIntegerField(primary_key=True)
+    id = models.BigAutoField(primary_key=True)
     correo = models.CharField(max_length=255)
     telefono = models.CharField(max_length=20, blank=True, null=True)
     nombre = models.CharField(max_length=100)
@@ -199,5 +199,5 @@ class Usuario(models.Model):
     folio = models.CharField(max_length=50)
 
     class Meta:
-        managed = False
+        # managed = False
         db_table = 'usuario'
