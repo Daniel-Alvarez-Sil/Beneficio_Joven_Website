@@ -208,13 +208,24 @@ class SolicitudNegocioSerializer(serializers.ModelSerializer):
 
 
 
+from decimal import Decimal
+from typing import Optional, Tuple
+
+from django.contrib.auth import get_user_model
+from django.core.exceptions import MultipleObjectsReturned
+from rest_framework import serializers
+
+from .models import Promocion, Negocio, AdministradorNegocio  # adjust import path as needed
+
+User = get_user_model()
+
+
 class PromocionCreateSerializer(serializers.ModelSerializer):
-    # Accept id_negocio as an integer in the payload
-    id_negocio = serializers.IntegerField(write_only=True)
+    # ✅ Make optional. ("optional" isn't a DRF arg — use required=False + allow_null=True)
+    id_negocio = serializers.IntegerField(write_only=True, required=False, allow_null=True)
 
     class Meta:
         model = Promocion
-        # Fields accepted from payload
         fields = (
             "id_negocio",
             "nombre",
@@ -229,16 +240,17 @@ class PromocionCreateSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, attrs):
+        print("Inicio de validación de PromocionCreateSerializer")
         fi = attrs.get("fecha_inicio")
         ff = attrs.get("fecha_fin")
         porcentaje = attrs.get("porcentaje", Decimal("0"))
         precio = attrs.get("precio", Decimal("0"))
 
-        # Date checks
+        # Fechas
         if fi and ff and ff < fi:
             raise serializers.ValidationError({"fecha_fin": "Debe ser mayor o igual a fecha_inicio."})
 
-        # Business rules
+        # Reglas de negocio
         if porcentaje is None:
             porcentaje = Decimal("0")
         if precio is None:
@@ -253,35 +265,81 @@ class PromocionCreateSerializer(serializers.ModelSerializer):
         if precio < 0:
             raise serializers.ValidationError({"precio": "No puede ser negativo."})
 
+        # Guardamos el tipo para usarlo en create()
         attrs["_tipo"] = "porcentaje" if porcentaje > 0 else "precio"
+        print("Fin de validación de PromocionCreateSerializer")
         return attrs
+    
+
+    def _resolve_negocio_y_admin(self, id_negocio_pk: Optional[int]) -> Tuple[Negocio, AdministradorNegocio]:
+        """
+        1) Si viene id_negocio en el payload: valida y obtiene su primer AdministradorNegocio.
+        2) Si NO viene: aplica la lógica solicitada para inferirlo desde el usuario autenticado.
+        """
+        if id_negocio_pk:
+            try:
+                negocio = Negocio.objects.get(pk=id_negocio_pk)
+            except Negocio.DoesNotExist:
+                raise serializers.ValidationError({"id_negocio": "Negocio no encontrado."})
+
+            admin = (
+                AdministradorNegocio.objects
+                .filter(id_negocio=negocio)
+                .order_by("id")
+                .first()
+            )
+            if not admin:
+                raise serializers.ValidationError(
+                    "No existe AdministradorNegocio asociado a este id_negocio."
+                )
+            return negocio, admin
+
+        # 🔐 Inferir desde el usuario autenticado
+        request = self.context.get("request")
+        if not request or not getattr(request, "user", None) or not request.user.is_authenticated:
+            raise serializers.ValidationError({
+                "id_negocio": "No se proporcionó id_negocio y no fue posible inferirlo (usuario no autenticado)."
+            })
+
+        id_administrador_negocio = request.user.id
+        try:
+            username = User.objects.get(id=id_administrador_negocio).username
+        except User.DoesNotExist:
+            raise serializers.ValidationError({"id_negocio": "Usuario autenticado inválido."})
+
+        try:
+            administradorNegocio = AdministradorNegocio.objects.get(usuario=username)
+        except AdministradorNegocio.DoesNotExist:
+            raise serializers.ValidationError({"id_negocio": "AdministradorNegocio no encontrado para el usuario."})
+        except MultipleObjectsReturned:
+            # Si existieran varios, tomamos el primero determinísticamente
+            administradorNegocio = (
+                AdministradorNegocio.objects.filter(usuario=username).order_by("id").first()
+            )
+
+        negocio = administradorNegocio.id_negocio  # puede ser instancia FK o id; manejamos ambos casos
+        if isinstance(negocio, (int, str)):
+            try:
+                negocio = Negocio.objects.get(pk=negocio)
+            except Negocio.DoesNotExist:
+                raise serializers.ValidationError({"id_negocio": "Negocio no encontrado para el usuario."})
+
+        return negocio, administradorNegocio
 
     def create(self, validated_data):
         from django.db import transaction
 
-        id_negocio_pk = validated_data.pop("id_negocio")
+        print("Inicio de creación de Promoción")
 
-        # Resolve FKs
-        try:
-            negocio = Negocio.objects.get(pk=id_negocio_pk)
-        except Negocio.DoesNotExist:
-            raise serializers.ValidationError({"id_negocio": "Negocio no encontrado."})
+        # Puede venir o no en el payload
+        id_negocio_pk = validated_data.pop("id_negocio", None)
 
-        # First AdministradorNegocio for this negocio
-        admin = (
-            AdministradorNegocio.objects
-            .filter(id_negocio=negocio)
-            .order_by("id")
-            .first()
-        )
-        if not admin:
-            raise serializers.ValidationError(
-                "No existe AdministradorNegocio asociado a este id_negocio."
-            )
+        # Resuelve Negocio e id_administrador_negocio según las reglas
+        negocio, admin = self._resolve_negocio_y_admin(id_negocio_pk)
 
-        # Build instance
+        # Tipo calculado en validate()
         tipo = validated_data.pop("_tipo")
-        # numero_canjeados is required by model: start at 0
+        # Asegurar valor inicial
         validated_data.setdefault("numero_canjeados", 0)
 
         with transaction.atomic():
@@ -292,3 +350,12 @@ class PromocionCreateSerializer(serializers.ModelSerializer):
                 **validated_data,
             )
         return promocion
+
+
+# La vista puede quedarse igual; DRF ya pasa request en serializer context.
+from rest_framework import permissions, generics
+
+class PromocionCreateView(generics.CreateAPIView):
+    queryset = Promocion.objects.all()
+    serializer_class = PromocionCreateSerializer
+    permission_classes = [permissions.IsAuthenticated]

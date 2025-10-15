@@ -236,6 +236,7 @@ class EstadisticasNegocioView(APIView):
 
 
 class PromocionCreateView(generics.CreateAPIView):
+    print("Entrando a PromocionCreateView")
     queryset = Promocion.objects.all()
     serializer_class = PromocionCreateSerializer
     # Adjust permissions as needed
