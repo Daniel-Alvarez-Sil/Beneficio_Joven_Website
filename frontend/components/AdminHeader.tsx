@@ -19,7 +19,11 @@ export function AdminHeader() {
         </div>
 
         <form action={logout}>
-          <Button variant="outline" type="submit" className="gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20">
+          <Button
+            variant="outline"
+            type="submit"
+            className="gap-2 btn-apple btn-gradient text-white border-white/20 bg-transparent hover:brightness-110"
+          >
             <LogOut className="w-4 h-4" />
             Cerrar sesión
           </Button>

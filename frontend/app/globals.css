@@ -174,13 +174,14 @@
 .auth-bg {
   position: relative;
   isolation: isolate;
+  overflow: hidden; /* para que los efectos no se salgan */
 }
 
 /* Radial glows sutiles detrás (para páginas sin aurora) */
 .auth-bg::before {
   content: "";
-  position: absolute;
-  inset: -20%;
+  position: fixed;
+  inset: 0%;
   background:
     radial-gradient(60% 60% at 20% 10%, color-mix(in oklch, var(--chart-2) 25%, transparent) 0%, transparent 60%),
     radial-gradient(50% 50% at 70% 85%, color-mix(in oklch, #8A2BE2 28%, transparent) 0%, transparent 60%),
@@ -234,6 +235,10 @@
   background-size: 16px 16px;
   mask-image: radial-gradient(90% 90% at 50% 30%, black, transparent 85%);
   opacity: 0.35;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden; 
 }
 
 /* Card de vidrio (única definición) */

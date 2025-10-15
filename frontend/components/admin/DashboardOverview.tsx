@@ -22,6 +22,7 @@ interface HeaderStats {
 const COLOR_VARS = Array.from({ length: 12 }, (_, i) => `var(--chart-${i + 1})`);
 const slugify = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
 type DonutDatum = { name: string; value: number; fill: string; slug: string };
 
 function objectToDonutData(obj?: Record<string, number>): DonutDatum[] {
@@ -37,28 +38,36 @@ function buildChartConfig(data: DonutDatum[]): ChartConfig {
   return cfg;
 }
 
-function SimpleStatCard({ title, value, icon }: { title: string; value: number | string; icon?: React.ReactNode }) {
+function SimpleStatCard({
+  title,
+  value,
+  icon,
+}: {
+  title: string;
+  value: number | string;
+  icon?: React.ReactNode;
+}) {
   return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-center gap-2">
-          {icon}
-          <div>
-            <p className="text-sm text-gray-600">{title}</p>
-            <p className="text-2xl font-bold">{value}</p>
-          </div>
-        </div>
-      </CardContent>
+    <Card className="glass-alt text-white flex flex-col justify-between">
+      {/* Header arriba como las otras cards */}
+      <div className="p-4 flex items-center gap-2">
+        {icon}
+        <CardTitle className="text-base font-semibold text-white">
+          {title}
+        </CardTitle>
+      </div>
+
+      {/* Valor centrado visualmente */}
+      <div className="flex-1 flex items-center justify-center pb-4">
+        <p className="text-6xl md:text-7xl font-extrabold leading-none tracking-tight text-center">
+          {value}
+        </p>
+      </div>
     </Card>
   );
 }
 
-function DonutCard({
-  title,
-  subtitle,
-  dataObj,
-  centerLabel = "Total",
-}: {
+function DonutCard({ title, subtitle, dataObj, centerLabel = "Total" }: {
   title: string;
   subtitle?: string;
   dataObj?: Record<string, number>;
@@ -69,12 +78,12 @@ function DonutCard({
   const config = useMemo(() => buildChartConfig(data), [data]);
 
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col glass-alt text-white">
       <CardHeader className="items-center pb-0">
-        <CardTitle>{title}</CardTitle>
-        {subtitle ? <CardDescription>{subtitle}</CardDescription> : null}
+        <CardTitle className="text-white">{title}</CardTitle>
+        {subtitle ? <CardDescription className="text-white/70">{subtitle}</CardDescription> : null}
       </CardHeader>
-      <CardContent className="flex-1 pb-0">
+      <CardContent className="flex-1 pb-0 chart-dark">
         <ChartContainer config={config} className="mx-auto aspect-square max-h-[250px]">
           <PieChart>
             <ChartTooltip cursor={false} content={<ChartTooltipContent nameKey="name" />} />
@@ -86,10 +95,10 @@ function DonutCard({
                     const cy = viewBox.cy as number;
                     return (
                       <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle">
-                        <tspan x={cx} y={cy} className="fill-foreground text-3xl font-bold">
+                        <tspan x={cx} y={cy} className="fill-white text-3xl font-bold">
                           {total.toLocaleString("es-MX")}
                         </tspan>
-                        <tspan x={cx} y={cy + 24} className="fill-muted-foreground">
+                        <tspan x={cx} y={cy + 24} className="fill-white/70">
                           {centerLabel}
                         </tspan>
                       </text>
@@ -102,7 +111,7 @@ function DonutCard({
           </PieChart>
         </ChartContainer>
       </CardContent>
-      <CardFooter className="flex-col gap-2 text-sm">
+      <CardFooter className="flex-col gap-2 text-sm text-white/80">
         <div className="flex items-center gap-2 leading-none font-medium">
           Distribución por negocio <TrendingUp className="h-4 w-4" />
         </div>
@@ -129,16 +138,14 @@ export function DashboardOverview() {
     }
   }
 
-  useEffect(() => {
-    fetchHeader();
-  }, []);
+  useEffect(() => { fetchHeader(); }, []);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       <SimpleStatCard
         title="Total Colaboradores"
         value={loading ? "—" : headerStats?.total_colaboradores ?? 0}
-        icon={<Users className="w-5 h-5 text-blue-500" />}
+        icon={<Users className="w-5 h-5" />}
       />
       <DonutCard
         title="Promociones (último mes)"
