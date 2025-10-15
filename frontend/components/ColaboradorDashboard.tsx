@@ -141,20 +141,29 @@ export function ColaboradorDashboard({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-      {/* Header */}
-      
+    <div className="min-h-screen relative text-white">
+      {/* Fondo aurora reutilizando tu clase global */}
+      <div className="auth-aurora" />
+      <div className="auth-stars" />
 
-      {/* Contenido */}
+      {/* Header opcional (si lo renderizas en layout, quítalo de aquí) */}
+      {/* <ColaboradorHeader /> */}
+
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         {/* Toolbar */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 text-sm text-white/75">
             <TrendingUp className="w-4 h-4" />
             Estadísticas de promociones (últimos 7 días)
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchData}
+              disabled={loading}
+              className="bg-white/10 hover:bg-white/20 border-white/30 text-white"
+            >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               <span className="ml-2">Actualizar</span>
             </Button>
@@ -162,53 +171,52 @@ export function ColaboradorDashboard({
         </div>
 
         {error && (
-          <Card className="border-destructive/30">
+          <Card className="glass border border-red-400/30">
             <CardHeader>
-              <CardTitle className="text-destructive">{error}</CardTitle>
+              <CardTitle className="text-red-300">{error}</CardTitle>
             </CardHeader>
           </Card>
         )}
 
         {/* KPIs */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <Card className="overflow-hidden">
+          <Card className="glass border border-white/15">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-muted-foreground">Total de canjes</CardTitle>
+              <CardTitle className="text-sm text-white/70">Total de canjes</CardTitle>
             </CardHeader>
             <CardContent>
               {loading ? (
                 <div className="h-16 flex items-center justify-center">
-                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <Loader2 className="h-6 w-6 animate-spin text-white/70" />
                 </div>
               ) : (
-                <div className="text-4xl font-bold tracking-tight">{fmtNumber(totalCanjes)}</div>
+                <div className="text-4xl font-bold tracking-tight text-white/70">{fmtNumber(totalCanjes)}</div>
               )}
-              <p className="text-xs text-muted-foreground mt-2">Suma en todas las promociones.</p>
+              <p className="text-xs text-white/60 mt-2">Suma en todas las promociones.</p>
             </CardContent>
           </Card>
 
-          {/* Puedes sumar otros KPIs cuando el API los exponga (p.ej. monto total, promociones activas, etc.) */}
-          <Card className="overflow-hidden">
+          <Card className="glass border border-white/15">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-muted-foreground">Promociones con canjes</CardTitle>
+              <CardTitle className="text-sm text-white/70">Promociones con canjes</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold tracking-tight">
-                {loading ? <span className="opacity-60">—</span> : fmtNumber(topMasData.length + topMenosData.length)}
+              <div className="text-4xl font-bold tracking-tight text-white/70">
+                {loading ? <span className="opacity-60 text-white/70">—</span> : fmtNumber(topMasData.length + topMenosData.length)}
               </div>
-              <p className="text-xs text-muted-foreground mt-2">Con al menos un canje registrado.</p>
+              <p className="text-xs text-white/60 mt-2">Con al menos un canje registrado.</p>
             </CardContent>
           </Card>
 
-          <Card className="overflow-hidden">
+          <Card className="glass border border-white/15">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-muted-foreground">Rango observado</CardTitle>
+              <CardTitle className="text-sm text-white/70">Rango observado</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold tracking-tight">
+              <div className="text-4xl font-bold tracking-tight text-white/70">
                 {loading || historicoData.length === 0 ? "—" : `${fmtDateShort(historicoData[0].date)} – ${fmtDateShort(historicoData[historicoData.length - 1].date)}`}
               </div>
-              <p className="text-xs text-muted-foreground mt-2">Últimos 7 días con actividad.</p>
+              <p className="text-xs text-white/60 mt-2">Últimos 7 días con actividad.</p>
             </CardContent>
           </Card>
         </div>
@@ -216,12 +224,22 @@ export function ColaboradorDashboard({
         {/* Top + Histórico + Top */}
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Top 5 con más canjes */}
-          <Card className="lg:col-span-1">
+          <Card className="glass border border-white/15 lg:col-span-1">
             <CardHeader>
-              <CardTitle>Top 5: más canjes</CardTitle>
+              <CardTitle className="text-white">Top 5: más canjes</CardTitle>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={barConfig} className="h-64 w-full">
+              {/* Fija paleta para charts en dark */}
+              <ChartContainer
+                config={barConfig}
+                className="h-64 w-full"
+                style={
+                  {
+                    // colores de serie (rechart usa estos CSS vars del shadcn container)
+                    ["--color-canjes" as any]: "hsl(var(--chart-1))",
+                  } as React.CSSProperties
+                }
+              >
                 <BarChart data={topMasData} margin={{ left: 8, right: 8 }}>
                   <CartesianGrid vertical={false} strokeDasharray="3 3" />
                   <XAxis
@@ -232,45 +250,54 @@ export function ColaboradorDashboard({
                     interval={0}
                     angle={-15}
                     textAnchor="end"
+                    tick={{ fill: "rgba(255,255,255,.75)" }}
                     tickFormatter={(v: string) => (v.length > 16 ? v.slice(0, 16) + "…" : v)}
                   />
-                  <YAxis allowDecimals={false} />
+                  <YAxis allowDecimals={false} tick={{ fill: "rgba(255,255,255,.75)" }} />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Bar dataKey="canjes" fill="var(--color-canjes)" radius={6}>
-                    <LabelList dataKey="canjes" position="top" offset={8} className="fill-foreground text-xs" />
+                    <LabelList dataKey="canjes" position="top" offset={8} className="fill-white text-xs" />
                   </Bar>
                 </BarChart>
               </ChartContainer>
               {!loading && topMasData.length === 0 && (
-                <p className="text-sm text-muted-foreground mt-2">Sin datos.</p>
+                <p className="text-sm text-white/70 mt-2">Sin datos.</p>
               )}
             </CardContent>
           </Card>
 
-          {/* Histórico 7 días: estilo AreaChart shadcn */}
-          <Card className="lg:col-span-2 pt-0">
-            <CardHeader className="flex items-center gap-2 space-y-0 border-b py-5 sm:flex-row">
+          {/* Histórico 7 días */}
+          <Card className="glass border border-white/15 lg:col-span-2 pt-0">
+            <CardHeader className="flex items-center gap-2 space-y-0 border-b border-white/10 py-5 sm:flex-row">
               <div className="grid flex-1 gap-1">
-                <CardTitle>Histórico de canjes – últimos 7 días</CardTitle>
+                <CardTitle className="text-white">Histórico de canjes – últimos 7 días</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
-              <ChartContainer config={areaConfig} className="aspect-auto h-[260px] w-full">
+              <ChartContainer
+                config={areaConfig}
+                className="aspect-auto h-[260px] w-full"
+                style={
+                  {
+                    ["--color-canjes" as any]: "hsl(var(--chart-1))",
+                    ["--color-monto_total_descuento" as any]: "hsl(var(--chart-2))",
+                  } as React.CSSProperties
+                }
+              >
                 <AreaChart data={historicoData}>
                   <defs>
                     <linearGradient id="fillCanjes" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="var(--color-canjes)" stopOpacity={0.8} />
+                      <stop offset="5%" stopColor="var(--color-canjes)" stopOpacity={0.8} />
                       <stop offset="95%" stopColor="var(--color-canjes)" stopOpacity={0.1} />
                     </linearGradient>
                     <linearGradient id="fillMonto" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="var(--color-monto_total_descuento)" stopOpacity={0.8} />
+                      <stop offset="5%" stopColor="var(--color-monto_total_descuento)" stopOpacity={0.8} />
                       <stop offset="95%" stopColor="var(--color-monto_total_descuento)" stopOpacity={0.1} />
                     </linearGradient>
                   </defs>
 
-                  <CartesianGrid vertical={false} />
+                  <CartesianGrid vertical={false} stroke="rgba(255,255,255,.12)" />
 
-                  {/* 👇 Esto hace que aparezcan los días como en shadcn */}
                   <XAxis
                     dataKey="date"
                     tickLine={false}
@@ -278,13 +305,10 @@ export function ColaboradorDashboard({
                     tickMargin={8}
                     minTickGap={28}
                     interval="preserveStartEnd"
+                    tick={{ fill: "rgba(255,255,255,.75)" }}
                     tickFormatter={(value: string) => {
-                      // value viene como "YYYY-MM-DD"
                       const d = new Date(value)
-                      return d.toLocaleDateString("es-MX", {
-                        month: "short", // abr, may, jun...
-                        day: "numeric", // 1, 2, 3...
-                      })
+                      return d.toLocaleDateString("es-MX", { month: "short", day: "numeric" })
                     }}
                   />
 
@@ -294,22 +318,12 @@ export function ColaboradorDashboard({
                       <ChartTooltipContent
                         labelFormatter={(value) => {
                           const d = new Date(String(value))
-                          return d.toLocaleDateString("es-MX", {
-                            weekday: "short", // lun, mar...
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })
+                          return d.toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short", year: "numeric" })
                         }}
-                        // Muestra $ para monto y número plano para canjes
                         formatter={(val, name) => {
                           const n = Number(val)
                           if (name === "monto_total_descuento") {
-                            return new Intl.NumberFormat("es-MX", {
-                              style: "currency",
-                              currency: "MXN",
-                              maximumFractionDigits: 0,
-                            }).format(n)
+                            return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(n)
                           }
                           return new Intl.NumberFormat("es-MX").format(n)
                         }}
@@ -337,20 +351,23 @@ export function ColaboradorDashboard({
                 </AreaChart>
               </ChartContainer>
               {!loading && historicoData.length === 0 && (
-                <p className="text-sm text-muted-foreground mt-3">Sin datos de los últimos 7 días.</p>
+                <p className="text-sm text-white/70 mt-3">Sin datos de los últimos 7 días.</p>
               )}
             </CardContent>
           </Card>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Top 5 con menos canjes */}
-          <Card className="lg:col-span-1">
+          <Card className="glass border border-white/15 lg:col-span-1">
             <CardHeader>
-              <CardTitle>Top 5: menos canjes</CardTitle>
+              <CardTitle className="text-white">Top 5: menos canjes</CardTitle>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={barConfig} className="h-64 w-full">
+              <ChartContainer
+                config={barConfig}
+                className="h-64 w-full"
+                style={{ ["--color-canjes" as any]: "hsl(var(--chart-1))" } as React.CSSProperties}
+              >
                 <BarChart data={topMenosData} margin={{ left: 8, right: 8 }}>
                   <CartesianGrid vertical={false} strokeDasharray="3 3" />
                   <XAxis
@@ -361,36 +378,37 @@ export function ColaboradorDashboard({
                     interval={0}
                     angle={-25}
                     textAnchor="end"
+                    tick={{ fill: "rgba(255,255,255,.75)" }}
                     tickFormatter={(v: string) => (v.length > 18 ? v.slice(0, 18) + "…" : v)}
                   />
-                  <YAxis allowDecimals={false} />
+                  <YAxis allowDecimals={false} tick={{ fill: "rgba(255,255,255,.75)" }} />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Bar dataKey="canjes" fill="var(--color-canjes)" radius={6}>
-                    <LabelList dataKey="canjes" position="top" offset={8} className="fill-foreground text-xs" />
+                    <LabelList dataKey="canjes" position="top" offset={8} className="fill-white text-xs" />
                   </Bar>
                 </BarChart>
               </ChartContainer>
               {!loading && topMenosData.length === 0 && (
-                <p className="text-sm text-muted-foreground mt-2">Sin datos.</p>
+                <p className="text-sm text-white/70 mt-2">Sin datos.</p>
               )}
             </CardContent>
           </Card>
 
-          {/* puedes dejar un espacio para más tarjetas o tablas futuras */}
+          {/* Próximamente */}
           <div className="lg:col-span-2 grid gap-6 sm:grid-cols-2">
-            <Card className="border-dashed">
+            <Card className="glass border border-white/10">
               <CardHeader>
-                <CardTitle className="text-sm text-muted-foreground">Próximamente</CardTitle>
+                <CardTitle className="text-sm text-white/70">Próximamente</CardTitle>
               </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
+              <CardContent className="text-sm text-white/60">
                 Tabla de canjes recientes / exportaciones / comparativas.
               </CardContent>
             </Card>
-            <Card className="border-dashed">
+            <Card className="glass border border-white/10">
               <CardHeader>
-                <CardTitle className="text-sm text-muted-foreground">Próximamente</CardTitle>
+                <CardTitle className="text-sm text-white/70">Próximamente</CardTitle>
               </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
+              <CardContent className="text-sm text-white/60">
                 Desglose por sucursal o categoría.
               </CardContent>
             </Card>
@@ -398,5 +416,5 @@ export function ColaboradorDashboard({
         </div>
       </main>
     </div>
-  )
+  );
 }

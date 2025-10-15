@@ -247,6 +247,25 @@
     inset 0 1px 0 rgba(255,255,255,.10);
 }
 
+/* Versión más opaca del glass */
+.glass-alt {
+  /* Opacidad alta: casi sólido pero con acabado glass */
+  background: rgba(4, 4, 4, 0.72); /* light */
+  backdrop-filter: blur(var(--blur-apple)) saturate(1.1);
+  -webkit-backdrop-filter: blur(var(--blur-apple)) saturate(1.1);
+  border: 1px solid rgba(255, 255, 255, 0.60);
+  box-shadow:
+    0 10px 30px rgba(0,0,0,.35),
+    inset 0 1px 0 rgba(255,255,255,.10);
+}
+
+/* En dark mode subimos opacidad con base oscura */
+.dark .glass-alt {
+  background: rgba(10, 12, 20, 0.72);      /* menos transparencia que antes */
+  border-color: rgba(255, 255, 255, 0.18); /* borde sutil */
+}
+
+
 /* Forzamos textos claros dentro del card de Auth */
 .auth-card :where(h1,h2,h3,h4,h5,h6,p,span,li,small,strong,label) {
   color: var(--foreground); /* en dark = blanco */

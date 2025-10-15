@@ -5,27 +5,26 @@ import { LogOut } from "lucide-react";
 import { logout } from "@/actions/login/auth";
 
 export function ColaboradorHeader() {
-    return (
-  <header className="sticky top-0 z-30 bg-white/80 backdrop-blur border-b">
-    <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-      <div className="flex items-center gap-3">
-        <div className="bg-gradient-to-r from-cyan-500 to-blue-500 w-10 h-10 rounded-xl flex items-center justify-center shadow-sm">
-          <span className="text-white font-bold">B</span>
+  return (
+    <header className="sticky top-0 z-30 glass border border-white/20 backdrop-blur supports-[backdrop-filter]:bg-white/10">
+      <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center text-white">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shadow">
+            <span className="text-white font-semibold">B</span>
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold leading-tight">Panel de Colaborador</h1>
+            <p className="text-xs text-white/70">Hola, Colaborador</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-semibold leading-tight">
-            Panel de Colaborador
-          </h1>
-          <p className="text-xs text-muted-foreground">Hola, Colaborador</p>
-        </div>
-      </div>
 
-      <form action={logout}>
-        <Button variant="outline" type="submit" className="gap-2">
-          <LogOut className="w-4 h-4" />
-          Cerrar sesión
-        </Button>
-      </form>
-    </div>
-  </header>);
+        <form action={logout}>
+          <Button variant="outline" type="submit" className="gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20">
+            <LogOut className="w-4 h-4" />
+            Cerrar sesión
+          </Button>
+        </form>
+      </div>
+    </header>
+  );
 }

@@ -253,7 +253,9 @@ export function ColaboradorPromociones({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+    <div className="min-h-screen relative text-white">
+      <div className="auth-aurora" />
+      <div className="auth-stars" />
       <main className="max-w-7xl mx-auto px-4 py-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-medium">Promociones</h2>
@@ -261,12 +263,12 @@ export function ColaboradorPromociones({
           {/* Create button + dialog */}
           <Dialog open={openCreate} onOpenChange={setOpenCreate}>
             <DialogTrigger asChild>
-              <Button className="gap-2">
+              <Button className="gap-2 btn-gradient btn-apple text-white">
                 <Plus className="h-4 w-4" />
                 Nueva promoción
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl glass-alt border border-white/20 text-white">
               <DialogHeader>
                 <DialogTitle>Crear promoción</DialogTitle>
                 <DialogDescription>
@@ -290,6 +292,7 @@ export function ColaboradorPromociones({
                       onChange={(e) => setNombre(e.target.value)}
                       placeholder="Ej. Viernes 2x1"
                       required
+                      className="input-apple text-white placeholder-white/60 caret-white"
                     />
                   </div>
 
@@ -313,6 +316,7 @@ export function ColaboradorPromociones({
                       onChange={(e) => setDescripcion(e.target.value)}
                       placeholder="Detalles de la promoción…"
                       rows={3}
+                      className="input-apple text-white placeholder-white/60 caret-white"
                     />
                   </div>
 
@@ -321,7 +325,7 @@ export function ColaboradorPromociones({
                     <Label>Fecha inicio</Label>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button type="button" variant="outline" className="w-full justify-start gap-2">
+                        <Button type="button" variant="outline" className="w-full justify-start gap-2 bg-white/10 border-white/30 text-white hover:bg-white/15">
                           <CalendarIcon className="h-4 w-4" />
                           {fechaInicioDate
                             ? fechaInicioDate.toLocaleDateString("es-MX")
@@ -341,7 +345,7 @@ export function ColaboradorPromociones({
                     <div className="space-y-1">
                       <Label className="text-xs">Hora inicio</Label>
                       <Select value={horaInicio} onValueChange={setHoraInicio}>
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full bg-white/10 border-white/30 text-white">
                           <SelectValue placeholder="Selecciona hora" />
                         </SelectTrigger>
                         <SelectContent>
@@ -357,7 +361,7 @@ export function ColaboradorPromociones({
                     <Label>Fecha fin</Label>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button type="button" variant="outline" className="w-full justify-start gap-2">
+                        <Button type="button" variant="outline" className="w-full justify-start gap-2 bg-white/10 border-white/30 text-white hover:bg-white/15">
                           <CalendarIcon className="h-4 w-4" />
                           {fechaFinDate
                             ? fechaFinDate.toLocaleDateString("es-MX")
@@ -445,7 +449,7 @@ export function ColaboradorPromociones({
                   <Button type="button" variant="secondary" onClick={() => setOpenCreate(false)}>
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={creating}>
+                  <Button type="submit" disabled={creating} className="btn-gradient btn-apple text-white">
                     {creating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                     Crear promoción
                   </Button>
@@ -481,11 +485,11 @@ export function ColaboradorPromociones({
               const isBusy = busyId === p.id || deletingId === p.id;
 
               return (
-                <Card key={p.id} className="hover:shadow-md transition-shadow">
+                <Card key={p.id} className="glass border border-white/15 hover:shadow-lg transition-shadow">
                   <CardHeader className="flex flex-row items-start justify-between space-y-0">
                     <div className="space-y-1">
-                      <CardTitle className="text-base">{p.nombre}</CardTitle>
-                      <Badge variant={p.activo ? "default" : "secondary"}>
+                      <CardTitle className="text-base text-white">{p.nombre}</CardTitle>
+                      <Badge variant={p.activo ? "default" : "secondary"} className={p.activo ? "bg-white/20 text-white" : "bg-white/10 text-white/80"}>
                         {p.activo ? "Activo" : "Inactivo"}
                       </Badge>
                     </div>
@@ -540,27 +544,27 @@ export function ColaboradorPromociones({
 
                   <CardContent className="space-y-3">
                     {p.descripcion ? (
-                      <p className="text-sm text-muted-foreground line-clamp-3">
+                      <p className="text-sm text-white/70 line-clamp-3">
                         {p.descripcion}
                       </p>
                     ) : null}
 
                     <div className="grid grid-cols-2 gap-3 text-xs">
                       <div>
-                        <div className="text-muted-foreground">Inicio</div>
-                        <div className="font-medium">{inicio}</div>
+                        <div className="text-white/70">Inicio</div>
+                        <div className="font-medium text-white/70">{inicio}</div>
                       </div>
                       <div>
-                        <div className="text-muted-foreground">Fin</div>
-                        <div className="font-medium">{fin}</div>
+                        <div className="text-white/70">Fin</div>
+                        <div className="font-medium text-white/70">{fin}</div>
                       </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 pt-1">
                       <PorcentajeBadge tipo={p.tipo} porcentaje={p.porcentaje} />
                       <PrecioBadge precio={p.precio} />
-                      <Badge variant="outline" className="gap-1">
-                        <Gift className="w-3 h-3" />
+                      <Badge variant="outline" className="gap-1 text-white/70">
+                        <Gift className="w-3 h-3 text-white/70" />
                         {p.numero_canjeados} canjes
                       </Badge>
                     </div>
