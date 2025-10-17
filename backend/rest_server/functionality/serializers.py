@@ -65,6 +65,12 @@ class AltaNegocioYAdminSerializer(serializers.Serializer):
             estatus="PENDIENTE"
         )
 
+        User.objects.create_user(
+            username=admin_data["usuario"],
+            password=admin_data["contrasena"],
+            tipo="administrador"
+        )
+
         # Devolvemos los tres para serializar una respuesta útil
         return {"negocio": negocio, "administrador": admin}
 
