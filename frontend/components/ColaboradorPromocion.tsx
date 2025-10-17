@@ -519,9 +519,9 @@ export function ColaboradorPromociones({
                             )}
                           </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent>
+                        <AlertDialogContent className="glass-alt">
                           <AlertDialogHeader>
-                            <AlertDialogTitle>
+                            <AlertDialogTitle className="text-white/70">
                               ¿Borrar “{p.nombre}”?
                             </AlertDialogTitle>
                             <AlertDialogDescription>
