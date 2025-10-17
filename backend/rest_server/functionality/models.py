@@ -1,8 +1,7 @@
 from django.db import models
 
-
 class Administrador(models.Model):
-    id = models.BigIntegerField(primary_key=True)
+    id = models.BigAutoField(primary_key=True)
     correo = models.CharField(max_length=255)
     telefono = models.CharField(max_length=20, blank=True, null=True)
     nombre = models.CharField(max_length=100)
@@ -12,7 +11,7 @@ class Administrador(models.Model):
     fecha_creado = models.DateTimeField()
 
     class Meta:
-        managed = False
+        # managed = False
         db_table = 'administrador'
 
 
@@ -33,7 +32,7 @@ class AdministradorNegocio(models.Model):
 
 
 class Apartado(models.Model):
-    id = models.BigIntegerField(primary_key=True)
+    id = models.BigAutoField(primary_key=True)
     id_promocion = models.ForeignKey('Promocion', models.DO_NOTHING, db_column='id_promocion')
     id_usuario = models.ForeignKey('Usuario', models.DO_NOTHING, db_column='id_usuario')
     fecha_creado = models.DateTimeField()
@@ -42,13 +41,11 @@ class Apartado(models.Model):
     url = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        # managed = False
         db_table = 'apartado'
 
-
-
 class Cajero(models.Model):
-    id = models.BigIntegerField(primary_key=True)
+    id = models.BigAutoField(primary_key=True)
     id_negocio = models.ForeignKey('Negocio', models.DO_NOTHING, db_column='id_negocio')
     correo = models.CharField(max_length=255)
     telefono = models.CharField(max_length=20, blank=True, null=True)
@@ -59,29 +56,29 @@ class Cajero(models.Model):
     contrasena = models.TextField()
 
     class Meta:
-        managed = False
+        # managed = False
         db_table = 'cajero'
 
 
 class Canje(models.Model):
-    id = models.BigIntegerField(primary_key=True)
+    id = models.BigAutoField(primary_key=True)
     id_promocion = models.ForeignKey('Promocion', models.DO_NOTHING, db_column='id_promocion')
     id_usuario = models.ForeignKey('Usuario', models.DO_NOTHING, db_column='id_usuario')
     id_cajero = models.ForeignKey(Cajero, models.DO_NOTHING, db_column='id_cajero')
     fecha_creado = models.DateTimeField()
 
     class Meta:
-        managed = False
+        # managed = False
         db_table = 'canje'
 
 
 class Categoria(models.Model):
-    id = models.BigIntegerField(primary_key=True)
+    id = models.BigAutoField(primary_key=True)
     titulo = models.CharField(max_length=120)
     descripcion = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        # managed = False
         db_table = 'categoria'
 
 
@@ -138,7 +135,7 @@ class PromocionCategoria(models.Model):
     id_categoria = models.ForeignKey(Categoria, models.DO_NOTHING, db_column='id_categoria')
 
     class Meta:
-        managed = False
+        # managed = False
         db_table = 'promocion_categoria'
 
 
@@ -162,7 +159,7 @@ class SolicitudNegocioDetalle(models.Model):
     observaciones = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        # managed = False
         db_table = 'solicitud_negocio_detalle'
 
 
@@ -173,7 +170,7 @@ class Suscripcion(models.Model):
     fecha_creado = models.DateTimeField()
 
     class Meta:
-        managed = False
+        # managed = False
         db_table = 'suscripcion'
 
 
@@ -197,7 +194,23 @@ class Usuario(models.Model):
     estado = models.CharField(max_length=120, blank=True, null=True)
     fecha_creado = models.DateTimeField()
     folio = models.CharField(max_length=50)
+    tipo = models.CharField(max_length=30, choices=[
+        ('colaborador', 'Colaborador'),
+        ('administrador', 'Administrador'),
+        ('cajero', 'Cajero'),
+        ('usuario', 'Usuario'),
+    ], default='usuario')
 
     class Meta:
         # managed = False
         db_table = 'usuario'
+
+class CodigoQR(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    id_usuario = models.ForeignKey(Usuario, models.DO_NOTHING, db_column='id_usuario')
+    codigo = models.TextField()
+    fecha_creado = models.DateTimeField()
+
+    class Meta:
+        # managed = False
+        db_table = 'codigo_qr'

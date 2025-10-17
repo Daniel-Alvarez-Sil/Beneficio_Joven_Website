@@ -15,25 +15,30 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+import environ
+
+env = environ.Env()
+# reading .env file
+print( ' ' + str(BASE_DIR) + '/.env')
+environ.Env.read_env('' + str(BASE_DIR) + '/.env')
+
 AUTH_USER_MODEL = "login.User"
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-q(-&qkb%npk6d0)3%5af%ixmz$n+@g)egtk90^oqhj0e!6(ige'
+SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['54.227.48.118', 'localhost']
 
 LOGIN_URL = '/admin/login/'
 
 # oAuth keys
-OAUTH_CLIENT_ID = "hWRE7xYtoLIw3k6q9PJeUlIGykrpnSHKReORaJec"
-OAUTH_CLIENT_SECRET = "4LZ5CutF2ronnlIBRBuggUoZpIhJvfxXdAMXw9hi6dAeWc2avJ8FxrgnZiQihCuHIR2x4R4Ag9f7tNVZ2n78WIzjxaB6xNuG214GBbPgrMltg3RehkOBiVwmqT8K9CzP"
-hey = "pbkdf2_sha256$1000000$HUIxM91imet1W0GFdMAt5p$GqxRRX3nvCo6WBwh0c9Ip+Z4I16JAmK6yCrdaHJl8s8="
+OAUTH_CLIENT_ID = env("OAUTH_CLIENT_ID")
+OAUTH_CLIENT_SECRET = env("OAUTH_CLIENT_SECRET")
 
 # Application definition
 
@@ -53,10 +58,11 @@ INSTALLED_APPS = [
     "functionality",
 ]
 
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # Your Next.js frontend
-]
+CORS_ALLOW_ALL_ORIGINS = True
+# CORS_ALLOW_CREDENTIALS = True
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000",  # Your Next.js frontend
+# ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -99,7 +105,15 @@ WSGI_APPLICATION = 'rest_server.wsgi.application'
 # }
 
 DATABASES = {
-    "default": {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': env("DATABASE_NAME"),
+        'USER': env("DATABASE_USER"),
+        'PASSWORD': env("DATABASE_PASSWORD"),
+        'HOST': env("DATABASE_HOST"),
+        'PORT': env("DATABASE_PORT")
+    },
+    "old_mysql": {
         "ENGINE": "django.db.backends.mysql",
         "NAME": "atizapan",          # your DB name
         "USER": "admin",
@@ -152,7 +166,7 @@ REST_FRAMEWORK = {
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Mexico_City'
 
 USE_I18N = True
 
@@ -163,6 +177,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / "static"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

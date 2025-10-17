@@ -8,3 +8,4 @@ from .utils.administradores import (SolicitudNegocioListView,
                     EstadisticasHeaderView, NegociosResumenView)
 
 
+from .utils.usuarios import (CodigoQRView)

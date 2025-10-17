@@ -13,3 +13,8 @@ env/
 db.sqlite3  # if it's only for local dev
 # Ignore your collectstatic output dir (adjust to your STATIC_ROOT)
 staticfiles/
+
+# env files (can opt-in for committing if needed)
+.env*
+env
+.env

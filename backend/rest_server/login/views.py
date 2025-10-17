@@ -27,7 +27,7 @@ class LoginView(APIView):
         username = request.data.get('username')
         password = request.data.get('password')
 
-        usuario = User.objects.filter(username=username).exclude(tipo='usuario').first()
+        usuario = User.objects.filter(username=username).first()
         if not usuario:
             return Response({'error': 'Invalid credentials or user type'}, status=status.HTTP_401_UNAUTHORIZED)
 
