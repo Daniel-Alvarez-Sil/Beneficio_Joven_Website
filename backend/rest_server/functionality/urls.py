@@ -7,6 +7,8 @@ from .views import (PromocionesPorNegocioUltimoMes, SolicitudNegocioListView, Ca
                     TotalColaboradoresView, PromocionesActivasPorNegocioAPIView, 
                     EstadisticasHeaderView, NegociosResumenView)
 
+from .views import (CodigoQRView)
+
 urlpatterns = [
     path("administradores-negocio/", AdministradorNegocioCreateView.as_view(), name="administrador-negocio-create"),
     path("list/promociones/", PromocionListView.as_view(), name="promocion-list"),
@@ -21,5 +23,6 @@ urlpatterns = [
     path("promociones/activas-por-negocio/", PromocionesActivasPorNegocioAPIView.as_view(), name="promociones-activas-por-negocio"),
     path("estadisticas/header/", EstadisticasHeaderView.as_view(), name="estadisticas-header"),
     path("negocios/resumen/", NegociosResumenView.as_view(), name="negocios-resumen"),
+    path("codigo-qr/", CodigoQRView.as_view(), name="codigo-qr"),
 ]
 
