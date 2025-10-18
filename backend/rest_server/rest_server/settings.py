@@ -56,7 +56,39 @@ INSTALLED_APPS = [
     # local
     "login",
     "functionality",
+    "storages",
 ]
+
+# DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+
+
+# AWS_STORAGE_BUCKET_NAME = "imagenes-beneficio-joven"
+# AWS_S3_REGION_NAME = "us-east-1"          # e.g. us-east-1
+# # AWS_S3_SIGNATURE_VERSION = "s3v4"
+# # AWS_S3_FILE_OVERWRITE = False              # don’t overwrite files with same name
+# # AWS_DEFAULT_ACL = None                     # let bucket policy control ACLs
+# # AWS_QUERYSTRING_AUTH = False               # True if you want signed URLs by default
+# # AWS_S3_OBJECT_PARAMETERS = {"CacheControl": "max-age=86400"}
+
+# # Credentials (use env vars or an IAM role; don’t hardcode in git)
+# # export AWS_ACCESS_KEY_ID=...
+# # export AWS_SECRET_ACCESS_KEY=...
+
+# # MEDIA_URL should point to S3; CloudFront is even better
+# AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
+# MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
+# # MEDIA_URL = f"s3://arn:aws:s3:us-east-1:200964494409:accesspoint/imagenes-beneficio-joven/"
+
+DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+
+# AWS credentials (use environment variables for security)
+AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME")
+AWS_S3_REGION_NAME = "us-east-1"
+AWS_QUERYSTRING_AUTH = False  # Makes files public by default
+# Media files on S3
+MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/"
 
 CORS_ALLOW_ALL_ORIGINS = True
 # CORS_ALLOW_CREDENTIALS = True

@@ -9,3 +9,5 @@ from .utils.administradores.administradores import (SolicitudNegocioListView,
 
 
 from .utils.usuarios.usuarios import (CodigoQRView, ListNegociosView, ListPromocionesView)
+
+from .utils.imagenes.imagenes import UploadFileView

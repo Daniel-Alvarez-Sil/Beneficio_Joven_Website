@@ -9,6 +9,8 @@ from .views import (PromocionesPorNegocioUltimoMes, SolicitudNegocioListView, Ca
 
 from .views import (CodigoQRView, ListNegociosView, ListPromocionesView)
 
+from .views import UploadFileView
+
 urlpatterns = [
     path("administradores-negocio/", AdministradorNegocioCreateView.as_view(), name="administrador-negocio-create"),
     path("list/promociones/", PromocionListView.as_view(), name="promocion-list"),
@@ -27,5 +29,7 @@ urlpatterns = [
     path("usuario/codigo-qr/", CodigoQRView.as_view(), name="codigo-qr"),
     path("usuario/list/negocios/", ListNegociosView.as_view(), name="list-negocios"),
     path("usuario/list/promociones/", ListPromocionesView.as_view(), name="list-promociones"),
+    # Imagenes
+    path("imagenes/upload/", UploadFileView.as_view(), name="upload-file"),
 ]
 
