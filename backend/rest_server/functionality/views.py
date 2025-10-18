@@ -1,11 +1,11 @@
-from .utils.colaboradores import (AdministradorNegocioCreateView, PromocionListView, 
+from .utils.colaboradores.colaboradores import (AdministradorNegocioCreateView, PromocionListView, 
                     PromocionDeleteView, PromocionUpdateView, PromocionCreateView, 
                     EstadisticasNegocioView)
 
-from .utils.administradores import (SolicitudNegocioListView, 
+from .utils.administradores.administradores import (SolicitudNegocioListView, 
                     PromocionesPorNegocioUltimoMes, CanjesPorNegocioLastMonthView, 
                     TotalColaboradoresView, PromocionesActivasPorNegocioAPIView,
                     EstadisticasHeaderView, NegociosResumenView)
 
 
-from .utils.usuarios import (CodigoQRView)
+from .utils.usuarios.usuarios import (CodigoQRView, ListNegociosView, ListPromocionesView)

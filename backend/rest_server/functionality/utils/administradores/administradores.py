@@ -1,7 +1,7 @@
 from rest_framework import permissions, status
 from rest_framework.generics import ListAPIView
-from ..models import SolicitudNegocio, Promocion, Canje, Negocio, AdministradorNegocio
-from ..serializers import SolicitudNegocioSerializer
+from ...models import SolicitudNegocio, Promocion, Canje, Negocio, AdministradorNegocio
+from ...serializers import SolicitudNegocioSerializer
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone

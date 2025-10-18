@@ -1,20 +1,20 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions, generics
-from ..serializers import (AltaNegocioYAdminSerializer, PromocionListSerializer, 
+from ...serializers import (AltaNegocioYAdminSerializer, PromocionListSerializer, 
                           DeleteUpdatePromocionSerializer, PromocionCreateSerializer,
                           EstadisticasParamsSerializer)
 
 from django.db import transaction, IntegrityError
 
-from ..models import Promocion, Canje, AdministradorNegocio
+from ...models import Promocion, Canje, AdministradorNegocio
 from login.models import User
 
 from datetime import timedelta
 from django.utils import timezone
 from django.db.models import Sum
 
-from ..models import Promocion
+from ...models import Promocion
 
 
 # Solicitud para crear un Negocio y su AdministradorNegocio asociado

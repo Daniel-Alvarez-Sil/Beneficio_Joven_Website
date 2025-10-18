@@ -7,7 +7,7 @@ from .views import (PromocionesPorNegocioUltimoMes, SolicitudNegocioListView, Ca
                     TotalColaboradoresView, PromocionesActivasPorNegocioAPIView, 
                     EstadisticasHeaderView, NegociosResumenView)
 
-from .views import (CodigoQRView)
+from .views import (CodigoQRView, ListNegociosView, ListPromocionesView)
 
 urlpatterns = [
     path("administradores-negocio/", AdministradorNegocioCreateView.as_view(), name="administrador-negocio-create"),
@@ -23,6 +23,9 @@ urlpatterns = [
     path("promociones/activas-por-negocio/", PromocionesActivasPorNegocioAPIView.as_view(), name="promociones-activas-por-negocio"),
     path("estadisticas/header/", EstadisticasHeaderView.as_view(), name="estadisticas-header"),
     path("negocios/resumen/", NegociosResumenView.as_view(), name="negocios-resumen"),
-    path("codigo-qr/", CodigoQRView.as_view(), name="codigo-qr"),
+    # Usuarios
+    path("usuario/codigo-qr/", CodigoQRView.as_view(), name="codigo-qr"),
+    path("usuario/list/negocios/", ListNegociosView.as_view(), name="list-negocios"),
+    path("usuario/list/promociones/", ListPromocionesView.as_view(), name="list-promociones"),
 ]
 
