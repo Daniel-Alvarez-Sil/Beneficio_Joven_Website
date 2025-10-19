@@ -9,14 +9,15 @@ from .views import (PromocionesPorNegocioUltimoMes, SolicitudNegocioListView, Ca
 
 from .views import (CodigoQRView, ListNegociosView, ListPromocionesView)
 
-from .views import UploadFileView
+from .views import PromocionCreateImageUploadView
 
 urlpatterns = [
     path("administradores-negocio/", AdministradorNegocioCreateView.as_view(), name="administrador-negocio-create"),
     path("list/promociones/", PromocionListView.as_view(), name="promocion-list"),
     path("promociones/delete/", PromocionDeleteView.as_view(), name="promocion-delete"),
     path("promociones/update/", PromocionUpdateView.as_view(), name="promocion-update"),
-    path("promociones/create/", PromocionCreateView.as_view(), name="promocion-create"),
+    # path("promociones/create/", PromocionCreateView.as_view(), name="promocion-create"),
+    path("promociones/create/", PromocionCreateImageUploadView.as_view(), name="promocion-create"),
     path("promociones/estadisticas/", EstadisticasNegocioView.as_view(), name="estadisticas-negocio"),
     path("solicitudes-negocio/list/", SolicitudNegocioListView.as_view(), name="solicitudes-negocio-list"),
     path("promociones/por-negocio-ultimo-mes/", PromocionesPorNegocioUltimoMes.as_view(), name="promociones-por-negocio-ultimo-mes"),
@@ -29,7 +30,7 @@ urlpatterns = [
     path("usuario/codigo-qr/", CodigoQRView.as_view(), name="codigo-qr"),
     path("usuario/list/negocios/", ListNegociosView.as_view(), name="list-negocios"),
     path("usuario/list/promociones/", ListPromocionesView.as_view(), name="list-promociones"),
-    # Imagenes
-    path("imagenes/upload/", UploadFileView.as_view(), name="upload-file"),
+    # Imagenes para pruebas
+    # path("imagenes/upload/", UploadFileView.as_view(), name="upload-file"),
 ]
 

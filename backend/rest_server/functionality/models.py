@@ -115,7 +115,7 @@ class Promocion(models.Model):
     limite_total = models.IntegerField(blank=True, null=True)
     fecha_inicio = models.DateTimeField()
     fecha_fin = models.DateTimeField()
-    imagen = models.TextField(blank=True, null=True)
+    imagen = models.ImageField(blank=True, null=True, max_length=500)
     numero_canjeados = models.IntegerField()
     tipo = models.CharField(max_length=20)
     porcentaje = models.DecimalField(max_digits=12, decimal_places=2)
@@ -161,7 +161,6 @@ class SolicitudNegocioDetalle(models.Model):
     class Meta:
         # managed = False
         db_table = 'solicitud_negocio_detalle'
-
 
 class Suscripcion(models.Model):
     pk = models.CompositePrimaryKey('id_usuario', 'id_negocio')

@@ -1,7 +1,7 @@
 from rest_framework import permissions, status
 from rest_framework.generics import ListAPIView
 from ...models import SolicitudNegocio, Promocion, Canje, Negocio, AdministradorNegocio
-from ...serializers import SolicitudNegocioSerializer
+from .serializers import SolicitudNegocioSerializer
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
@@ -10,8 +10,6 @@ from rest_framework.response import Response
 from django.db.models import (
     Count, FloatField, Subquery, OuterRef, F, Value, Case, When
 )
-
-
 
 class SolicitudNegocioListView(ListAPIView):
     """

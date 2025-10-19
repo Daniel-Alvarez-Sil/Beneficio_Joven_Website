@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions, generics
-from ...serializers import (AltaNegocioYAdminSerializer, PromocionListSerializer, 
+from .serializers import (AltaNegocioYAdminSerializer, PromocionListSerializer, 
                           DeleteUpdatePromocionSerializer, PromocionCreateSerializer,
                           EstadisticasParamsSerializer)
 
@@ -123,23 +123,7 @@ class PromocionDeleteView(APIView):
             )
 
 
-# Petición para añadir una promoción 
-# class PromocionCreateView(generics.CreateAPIView):
-#     """
-#     POST /functionality/promociones/
-#     Body: JSON with the fields defined in PromocionCreateSerializer.
-#     """
-#     queryset = Promocion.objects.all()
-#     serializer_class = PromocionCreateSerializer
-#     permission_classes = [permissions.AllowAny]  # switch to IsAuthenticated if needed
-
-#     @transaction.atomic
-#     def post(self, request, *args, **kwargs):
-#         return super().post(request, *args, **kwargs)
-
-
 # Petición para consumir estadísticas 
-
 class EstadisticasNegocioView(APIView):
     """
     GET /functionality/promociones/estadisticas/?id_negocio=1
@@ -157,12 +141,6 @@ class EstadisticasNegocioView(APIView):
     permission_classes = [permissions.AllowAny]  # switch to IsAuthenticated if needed
 
     def get(self, request, *args, **kwargs):
-        # Accept id from query string (preferred) or JSON body (fallback)
-        # payload = request.query_params if request.query_params else request.data
-        # params = EstadisticasParamsSerializer(data=payload)
-        # params.is_valid(raise_exception=True)
-        # id_negocio = params.validated_data["id_negocio"]
-
         id_administrador_negocio = request.user.id if request.user and request.user.is_authenticated else None
         username = User.objects.get(id=id_administrador_negocio).username if id_administrador_negocio else None
         print(username)
@@ -240,4 +218,5 @@ class PromocionCreateView(generics.CreateAPIView):
     queryset = Promocion.objects.all()
     serializer_class = PromocionCreateSerializer
     # Adjust permissions as needed
-    permission_classes = [permissions.IsAuthenticated]  # or [permissions.AllowAny]
+    permission_classes = [permissions.AllowAny]  # or [permissions.AllowAny]
+

@@ -1,22 +1,3 @@
-# from rest_framework.views import APIView
-# from rest_framework.parsers import MultiPartParser, FormParser
-# from rest_framework.response import Response
-# from rest_framework.permissions import AllowAny
-# from rest_framework import status
-# from django.core.files.storage import default_storage
-
-# class UploadFileView(APIView):
-#     permission_classes = [AllowAny]
-#     parser_classes = [MultiPartParser, FormParser]
-
-#     def post(self, request):
-#         f = request.FILES.get("file")
-#         if not f:
-#             return Response({"detail": "file is required"}, status=status.HTTP_400_BAD_REQUEST)
-#         path = default_storage.save(f"{f.name}", f)
-#         return Response({"path": path, "url": default_storage.url(path)}, status=201)
-
-# views.py
 import os
 import uuid
 import datetime
@@ -34,6 +15,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework import status
 
+# Serializer to create promocion
+from functionality.utils.colaboradores.serializers import PromocionCreateSerializer
 
 def _slugify_filename(name: str) -> str:
     # drop extension & normalize
@@ -81,8 +64,17 @@ class UploadFileView(APIView):
 
     def post(self, request):
         f = request.FILES.get("file")
+        campos = request.data
+        serializer = PromocionCreateSerializer(
+            data=campos, 
+            context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)   
+        result = serializer.save()
+        print("Serializer saved:", result)
+
         if not f:
-            return Response({"detail": "file is required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.to_representation(result), status=status.HTTP_201_CREATED)
 
         # --- Config (from settings or environment) ---
         bucket = getattr(settings, "AWS_STORAGE_BUCKET_NAME", None) or os.environ.get("S3_BUCKET_NAME")
@@ -127,18 +119,13 @@ class UploadFileView(APIView):
         # Always include a presigned URL (works even if private)
         try:
             presigned_url = s3.generate_presigned_url(
-                "get_object", Params={"Bucket": bucket, "Key": key}, ExpiresIn=3600
+                "get_object", Params={"Bucket": bucket, "Key": key}, ExpiresIn=10000
             )
         except ClientError:
             presigned_url = None
-
-        return Response(
-            {
-                "message": "Imagen subida con éxito",
-                "imagen_key": key,
-                "imagen_url": public_url,
-                "imagen_presigned_url": presigned_url,
-                "content_type": mime,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        
+        # Fin, todo fue exitoso
+        result.imagen = public_url
+        result.save()
+        return Response(serializer.to_representation(result), status=status.HTTP_201_CREATED)
+        
