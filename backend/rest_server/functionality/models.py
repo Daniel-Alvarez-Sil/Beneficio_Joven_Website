@@ -76,6 +76,7 @@ class Categoria(models.Model):
     id = models.BigAutoField(primary_key=True)
     titulo = models.CharField(max_length=120)
     descripcion = models.TextField(blank=True, null=True)
+    image = models.ImageField(max_length=500, blank=True, null=True)
 
     class Meta:
         # managed = False
@@ -98,7 +99,7 @@ class Negocio(models.Model):
     colonia = models.CharField(max_length=120, blank=True, null=True)
     municipio = models.CharField(max_length=120, blank=True, null=True)
     estado = models.CharField(max_length=120, blank=True, null=True)
-    logo = models.TextField(blank=True, null=True)
+    logo = models.ImageField(max_length=500, blank=True, null=True)
 
     class Meta:
         # managed = False
@@ -123,6 +124,11 @@ class Promocion(models.Model):
     # Estatus opciones "activado, desactivado"
     activo = models.BooleanField(default=True)
     fecha_creado = models.DateTimeField(auto_now=True)
+    categorias = models.ManyToManyField(
+        Categoria,
+        through='PromocionCategoria',
+        related_name='promociones'
+    )
 
     class Meta:
         # managed = False
@@ -142,7 +148,7 @@ class PromocionCategoria(models.Model):
 class SolicitudNegocio(models.Model):
     id = models.BigAutoField(primary_key=True)
     id_negocio = models.ForeignKey(Negocio, models.DO_NOTHING, db_column='id_negocio', blank=True, null=True)
-    estatus = models.CharField(max_length=20)
+    estatus = models.CharField(max_length=20, choices=[('pendiente', 'Pendiente'), ('aprobado', 'Aprobado'), ('rechazado', 'Rechazado')], default='pendiente')
 
     class Meta:
         # managed = False
@@ -152,7 +158,7 @@ class SolicitudNegocio(models.Model):
 class SolicitudNegocioDetalle(models.Model):
     pk = models.CompositePrimaryKey('id_solicitud', 'fecha_creado')
     id_solicitud = models.ForeignKey(SolicitudNegocio, models.DO_NOTHING, db_column='id_solicitud')
-    fecha_creado = models.DateTimeField()
+    fecha_creado = models.DateTimeField(auto_now_add=True)
     id_administrador = models.ForeignKey(Administrador, models.DO_NOTHING, db_column='id_administrador')
     es_aprobado = models.IntegerField()
     num_intento = models.IntegerField()
@@ -166,7 +172,7 @@ class Suscripcion(models.Model):
     pk = models.CompositePrimaryKey('id_usuario', 'id_negocio')
     id_usuario = models.ForeignKey('Usuario', models.DO_NOTHING, db_column='id_usuario')
     id_negocio = models.ForeignKey(Negocio, models.DO_NOTHING, db_column='id_negocio')
-    fecha_creado = models.DateTimeField()
+    fecha_creado = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         # managed = False

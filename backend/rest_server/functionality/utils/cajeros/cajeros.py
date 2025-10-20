@@ -9,7 +9,6 @@ from django.utils import timezone
 
 class validarQRView(APIView):
     permission_classes = [IsAuthenticated]
-
     def post(self, request):
         id_administrador_negocio = request.user.id 
         username = User.objects.get(id=id_administrador_negocio).username if id_administrador_negocio else None

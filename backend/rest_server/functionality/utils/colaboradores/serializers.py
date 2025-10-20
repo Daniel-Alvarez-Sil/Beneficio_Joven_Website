@@ -2,12 +2,13 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
-from ...models import AdministradorNegocio, Negocio, SolicitudNegocio, Promocion # ajusta import
+from ...models import AdministradorNegocio, Negocio, SolicitudNegocio, Promocion, Cajero, PromocionCategoria
 from login.models import User
 from decimal import Decimal
 # Optional, tuple and multipleobjectsreturned imports
 from typing import Optional, Tuple
 from django.core.exceptions import MultipleObjectsReturned
+from functionality.utils.ai.automata import infer_promocion_fields
 
 
 class NegocioCreateSerializer(serializers.ModelSerializer):
@@ -54,9 +55,15 @@ class AltaNegocioYAdminSerializer(serializers.Serializer):
         # 1) Crear Negocio (fecha_creado e id_usuario se calculan aquí)
         negocio = Negocio.objects.create(
             **negocio_data,
-            fecha_creado=timezone.now()
+            logo = self.context["logo_key"] if "logo_key" in self.context else None,
+            fecha_creado=timezone.now(), 
         )
 
+        # for cat_id in ai["categoria"]:
+        #     Categoria.objects.create(
+        #         id_negocio=negocio,
+        #         id_categoria=cat_id
+        #     )
 
         # 3) Crear AdministradorNegocio ligado al Negocio creado
         admin = AdministradorNegocio.objects.create(
@@ -75,6 +82,8 @@ class AltaNegocioYAdminSerializer(serializers.Serializer):
             password=admin_data["contrasena"],
             tipo="administrador"
         )
+
+
 
         # Devolvemos los tres para serializar una respuesta útil
         return {"negocio": negocio, "administrador": admin}
@@ -99,7 +108,7 @@ class AltaNegocioYAdminSerializer(serializers.Serializer):
                 "colonia": negocio.colonia,
                 "municipio": negocio.municipio,
                 "estado": negocio.estado,
-                "logo": negocio.logo,
+                "logo": self.context["logo_key"] if "logo_key" in self.context else None,
             },
             "administrador": {
                 "id": admin.id,
@@ -266,7 +275,69 @@ class PromocionCreateSerializer(serializers.ModelSerializer):
                 tipo=tipo,
                 **validated_data,
             )
+            ai = infer_promocion_fields(
+                nombre=promocion.nombre,
+                descripcion=promocion.descripcion,
+            )
+            print(f"Categorías AI inferidas: {ai}")
+            for cat_id in ai:
+                PromocionCategoria.objects.create(
+                    id_promocion=promocion,
+                    id_categoria_id=cat_id
+                )
         return promocion
 
 class EstadisticasParamsSerializer(serializers.Serializer):
     id_negocio = serializers.IntegerField(min_value=1)
+
+class AltaCajeroSerializer(serializers.ModelSerializer):
+    contrasena = serializers.CharField(write_only=True)
+    id_negocio = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+
+    class Meta:
+        model = Cajero
+        fields = [
+            "id_negocio",
+            "correo", "telefono", "nombre", "apellido_paterno",
+            "apellido_materno", "usuario", "contrasena"
+        ]
+
+    def create(self, validated_data):
+        print("Inicio de creación de Cajero")
+        User = get_user_model()
+        usuario_existente = User.objects.filter(username=validated_data["correo"], tipo="cajero").exists()
+        if usuario_existente:
+            raise serializers.ValidationError({"correo": "Ya existe un usuario cajero con este correo."})
+        User.objects.create_user(
+            username=validated_data["correo"],
+            password=validated_data["contrasena"],
+            tipo="cajero"
+        )
+
+        request = self.context.get("request")
+        if not request or not getattr(request, "user", None) or not request.user.is_authenticated:
+            raise serializers.ValidationError({
+                "id_negocio": "No se proporcionó id_negocio y no fue posible inferirlo (usuario no autenticado)."
+            })
+
+        id_administrador_negocio = request.user.id
+        try:
+            username = User.objects.get(id=id_administrador_negocio).username
+        except User.DoesNotExist:
+            raise serializers.ValidationError({"id_negocio": "Usuario autenticado inválido."})
+        try:
+            administradorNegocio = AdministradorNegocio.objects.get(usuario=username)
+        except AdministradorNegocio.DoesNotExist:
+            raise serializers.ValidationError({"id_negocio": "AdministradorNegocio no encontrado para el usuario."})
+        except MultipleObjectsReturned:
+            # Si existieran varios, tomamos el primero determinísticamente
+            administradorNegocio = (
+                AdministradorNegocio.objects.filter(usuario=username).order_by("id").first()
+            )
+
+        negocio = administradorNegocio.id_negocio  # puede ser instancia FK o id; manejamos ambos casos
+        print(negocio)
+        validated_data["id_negocio"] = negocio
+
+        cajero = Cajero.objects.create(**validated_data)
+        return cajero

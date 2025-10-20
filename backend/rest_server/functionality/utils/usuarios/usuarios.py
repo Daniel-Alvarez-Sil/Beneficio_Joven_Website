@@ -2,11 +2,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from ...models import CodigoQR, Negocio, Promocion, AdministradorNegocio
+from ...models import CodigoQR, Negocio, Promocion, AdministradorNegocio, Suscripcion, Categoria
 from login.models import User
 from django.utils import timezone
-from .serializers import NegocioSerializer, PromocionSerializer
+from .serializers import NegocioSerializer, PromocionSerializer, CategoriaSerializer
 from django.db.models import Q
+# Generics
+from rest_framework import generics
 
 class CodigoQRView(APIView):
     permission_classes = [AllowAny]
@@ -53,3 +55,34 @@ class ListPromocionesView(APIView):
         serializer = PromocionSerializer(promociones, many=True)
         return Response(serializer.data, status=200)
 
+class SuscripcionANegocioView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        id_usuario = request.user.id
+        id_negocio = request.data.get('id_negocio')
+        try:
+            suscripcion = Suscripcion.objects.get(id_usuario_id=id_usuario, id_negocio_id=id_negocio)
+            suscripcion.delete()
+            return Response({'message': 'Suscripción cancelada al negocio.'}, status=200)
+        except Suscripcion.DoesNotExist:
+            Suscripcion.objects.create(
+                id_usuario_id=id_usuario,
+                id_negocio_id=id_negocio,
+            )
+            return Response({'message': 'Suscripción exitosa al negocio.'}, status=200)
+        
+class ListPromocionSuscripcionesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        id_usuario = request.user.id
+        suscripciones = Suscripcion.objects.filter(id_usuario_id=id_usuario)
+        promociones = Promocion.objects.filter(id_negocio_id__in=[s.id_negocio_id for s in suscripciones])
+        serializer = PromocionSerializer(promociones, many=True)
+        return Response(serializer.data, status=200)
+    
+class ListCategoriasView(generics.ListAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = CategoriaSerializer
+    queryset = Categoria.objects.all()

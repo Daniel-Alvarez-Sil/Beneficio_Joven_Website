@@ -3,11 +3,11 @@ from rest_framework.response import Response
 from rest_framework import status, permissions, generics
 from .serializers import (AltaNegocioYAdminSerializer, PromocionListSerializer, 
                           DeleteUpdatePromocionSerializer, PromocionCreateSerializer,
-                          EstadisticasParamsSerializer)
+                          EstadisticasParamsSerializer, AltaCajeroSerializer)
 
 from django.db import transaction, IntegrityError
 
-from ...models import Promocion, Canje, AdministradorNegocio
+from ...models import Promocion, Canje, AdministradorNegocio, Cajero 
 from login.models import User
 
 from datetime import timedelta
@@ -220,3 +220,16 @@ class PromocionCreateView(generics.CreateAPIView):
     # Adjust permissions as needed
     permission_classes = [permissions.AllowAny]  # or [permissions.AllowAny]
 
+class CreateCajeroView(generics.CreateAPIView):
+    print("Entrando a CreateCajeroView")
+    permission_classes = [permissions.AllowAny]
+    queryset = Cajero.objects.all()
+    serializer_class = AltaCajeroSerializer
+
+    # def post(self, request, *args, **kwargs):
+    #     serializer = AltaCajeroSerializer(
+    #         data=request.data, context={"request": request}
+    #     )
+    #     serializer.is_valid(raise_exception=True)
+    #     result = serializer.save()
+    #     return Response(serializer.to_representation(result), status=status.HTTP_201_CREATED)

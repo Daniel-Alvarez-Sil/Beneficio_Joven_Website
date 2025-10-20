@@ -90,6 +90,9 @@ AWS_QUERYSTRING_AUTH = False  # Makes files public by default
 # Media files on S3
 MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/"
 
+# OpenAI API Key
+OPENAI_API_KEY = env("OPENAI_API_KEY")
+
 CORS_ALLOW_ALL_ORIGINS = True
 # CORS_ALLOW_CREDENTIALS = True
 # CORS_ALLOWED_ORIGINS = [

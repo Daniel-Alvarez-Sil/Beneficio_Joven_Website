@@ -1,6 +1,7 @@
 from rest_framework import permissions, status
 from rest_framework.generics import ListAPIView
-from ...models import SolicitudNegocio, Promocion, Canje, Negocio, AdministradorNegocio
+from ...models import SolicitudNegocio, Promocion, Canje, Negocio, AdministradorNegocio, Administrador, SolicitudNegocioDetalle
+from login.models import User
 from .serializers import SolicitudNegocioSerializer
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -32,7 +33,50 @@ class SolicitudNegocioListView(ListAPIView):
             qs = qs.filter(estatus__iexact=estatus)
 
         return qs
-    
+
+class ReviewSolicitudNegocioAPIView(APIView):
+    permission_classes = [permissions.AllowAny]  # adjust as needed
+
+    def post(self, request, *args, **kwargs):
+        """
+        POST /functionality/review-solicitud-negocio/
+        Body:
+        {
+            "id_solicitud": <int>,
+            "estatus": "<texto>",
+            "observaciones": "<texto>"
+        }
+        """
+        data = request.data
+        id_solicitud = data.get("id_solicitud")
+        user = User.objects.get(id=request.user.id)
+        id_administrador = Administrador.objects.get(correo=user.username).id if Administrador.objects.filter(correo=user.username).exists() else None
+        estatus = data.get("estatus")
+        observaciones = data.get("observaciones", "")
+
+        if not all([id_solicitud, id_administrador, estatus]):
+            return Response({"error": "Faltan campos obligatorios."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            solicitud = SolicitudNegocio.objects.get(id=id_solicitud)
+        except SolicitudNegocio.DoesNotExist:
+            return Response({"error": "Solicitud no encontrada."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Update solicitud status
+        solicitud.estatus = estatus
+        solicitud.save()
+        count = SolicitudNegocioDetalle.objects.filter(id_solicitud=id_solicitud).count()
+        # Create SolicitudNegocioDetalle entry
+        detalle = SolicitudNegocioDetalle(
+            id_solicitud=solicitud,
+            id_administrador_id=id_administrador,
+            observaciones=observaciones,
+            num_intento=count + 1,
+            es_aprobado=1 if estatus.lower() == "aprobado" else 0,
+        )
+        detalle.save()
+
+        return Response({"message": "Solicitud revisada exitosamente."}, status=status.HTTP_200_OK)
 
 class PromocionesPorNegocioUltimoMes(APIView):
     permission_classes = [permissions.AllowAny]
@@ -246,3 +290,4 @@ class NegociosResumenView(APIView):
             for row in qs
         ]
         return Response(data)
+
