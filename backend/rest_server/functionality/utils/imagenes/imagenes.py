@@ -86,7 +86,7 @@ def upload_file_to_s3(f, prefix) -> str:
         return Response({"detail": "S3 upload failed", "error": str(e)}, status=status.HTTP_502_BAD_GATEWAY)
 
     print("File uploaded successfully.")
-    return _s3_https_url(bucket, region, key, custom_domain=custom_domain)
+    return key
     # --- URLs ---
     # public_url = _s3_https_url(bucket, region, key, custom_domain=custom_domain)
     # # Always include a presigned URL (works even if private)
@@ -147,7 +147,16 @@ class UploadNegocioWithFileView(APIView):
             key = upload_file_to_s3(f, 'logos_negocios/')
             print("Returning response with URLs.")
         serializer = AltaNegocioYAdminSerializer(
-            data=request.data, context={"request": request, "logo_key": key}
+            data=request.data, context={"request": request, "logo_key": _s3_https_url(
+                getattr(settings, "AWS_STORAGE_BUCKET_NAME", None) or os.environ.get("S3_BUCKET_NAME"),
+                getattr(settings, "AWS_S3_REGION_NAME", None)
+                or getattr(settings, "AWS_REGION", None)
+                or os.environ.get("AWS_REGION")
+                or "us-east-1",
+                key,
+                custom_domain=getattr(settings, "AWS_S3_CUSTOM_DOMAIN", None)
+                or os.environ.get("AWS_S3_CUSTOM_DOMAIN"),
+            )}
         )
         serializer.is_valid(raise_exception=True)
         result = serializer.save()
