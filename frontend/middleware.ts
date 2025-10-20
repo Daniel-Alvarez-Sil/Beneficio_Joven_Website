@@ -4,7 +4,7 @@ import { verifyRole } from './lib/login/dal'
  
 // 1. Specify protected and public routes
 // const protectedRoutes = ['/dashboard', '/prayers']
-const publicRoutes = ['/registro', '/registro/colaborador', '/registro/negocio']
+const publicRoutes = ['/registro', '/registro/colaborador', '/registro/negocio', '/public']
  
 export default async function middleware(req: NextRequest) {
   // 2. Check if the current route is protected or public
@@ -48,5 +48,7 @@ export default async function middleware(req: NextRequest) {
  
 // Routes Middleware should not run on
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|.*\\.png$).*)'],
+  matcher: [
+    '/((?!api|_next/static|_next/image|_next/data|favicon.ico|robots.txt|sitemap.xml|manifest.webmanifest|.*\\.[^/]+$).*)',
+  ],
 }

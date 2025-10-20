@@ -6,7 +6,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ColaboradorHeader } from '@/components/ColaboradorHeader';
 import { ColaboradorDashboard } from '@/components/ColaboradorDashboard';
 import { ColaboradorPromociones } from '@/components/ColaboradorPromocion';
-import { ColaboradorCajero } from '@/components/ColaboradorCajero'; // ⬅️ nuevo
+import { ColaboradorCajero } from '@/components/ColaboradorCajero';
 
 type User = { name: string; email: string; type: 'admin' | 'colaborador' };
 
