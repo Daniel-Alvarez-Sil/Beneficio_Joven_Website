@@ -22,9 +22,11 @@ class validarQRView(APIView):
             return Response({"detail": "El administrador no tiene un negocio asociado."}, status=status.HTTP_404_NOT_FOUND)
 
         codigo = request.data.get('codigo')
+        id_codigo = codigo.split('-')[1] if codigo else None
+        print(f"Validando código QR: {id_codigo} para el negocio ID: {id_negocio}")
 
         try:
-            codigo_qr = CodigoQR.objects.filter(codigo=codigo, utilizado=False).last()
+            codigo_qr = CodigoQR.objects.filter(id=id_codigo, utilizado=False).last()
             print(timezone.localtime(codigo_qr.fecha_creado + timezone.timedelta(minutes=5)))
             print(timezone.localtime(timezone.now()))
             if timezone.localtime(codigo_qr.fecha_creado + timezone.timedelta(minutes=5)) < timezone.localtime(timezone.now()):
