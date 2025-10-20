@@ -12,7 +12,7 @@ from .views import (PromocionesPorNegocioUltimoMes, SolicitudNegocioListView, Ca
 
 # Usuarios Views
 from .views import (CodigoQRView, ListNegociosView, ListPromocionesView, SuscripcionANegocioView, 
-                    ListPromocionSuscripcionesView, ListCategoriasView)
+                    ListPromocionSuscripcionesView, ListCategoriasView, ListUsuarioInfoView)
 
 # Imagenes Upload Views
 from .views import (PromocionCreateImageUploadView, NegocioCreateImageUploadView)
@@ -51,6 +51,7 @@ urlpatterns = [
     path("usuario/suscripcion-negocio/", SuscripcionANegocioView.as_view(), name="suscripcion-negocio"),
     path("usuario/list/promociones-suscripciones/", ListPromocionSuscripcionesView.as_view(), name="list-promocion-suscripciones"),
     path("usuario/list/categorias/", ListCategoriasView.as_view(), name="list-categorias"),
+    path("usuario/info/", ListUsuarioInfoView.as_view(), name="list-usuario-info"),
     # Imagenes para pruebas
     # path("imagenes/upload/", UploadFileView.as_view(), name="upload-file"),
 

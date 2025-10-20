@@ -2,10 +2,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from ...models import CodigoQR, Negocio, Promocion, AdministradorNegocio, Suscripcion, Categoria
+from ...models import CodigoQR, Negocio, Promocion, AdministradorNegocio, Suscripcion, Categoria, Usuario
 from login.models import User
 from django.utils import timezone
-from .serializers import NegocioSerializer, PromocionSerializer, CategoriaSerializer
+from .serializers import NegocioSerializer, PromocionSerializer, CategoriaSerializer, UsuarioSerializer
 from django.db.models import Q
 # Generics
 from rest_framework import generics
@@ -86,3 +86,21 @@ class ListCategoriasView(generics.ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = CategoriaSerializer
     queryset = Categoria.objects.all()
+
+class ListUsuarioInfoView(APIView):
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        username = request.user.username
+        usuario_obj = User.objects.get(username=username)
+        id_usuario = usuario_obj.id if usuario_obj else None
+
+        if not id_usuario:
+            return Response({'detail': 'Usuario no autenticado.'}, status=401)
+
+        try:
+            usuario = Usuario.objects.get(id=id_usuario)
+            serializer = UsuarioSerializer(usuario)
+            return Response(serializer.data, status=200)
+        except Usuario.DoesNotExist:
+            return Response({'detail': 'Usuario no encontrado.'}, status=404)

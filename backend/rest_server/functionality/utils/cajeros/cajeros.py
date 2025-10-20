@@ -30,12 +30,16 @@ class validarQRView(APIView):
             print(timezone.localtime(codigo_qr.fecha_creado + timezone.timedelta(minutes=5)))
             print(timezone.localtime(timezone.now()))
             if timezone.localtime(codigo_qr.fecha_creado + timezone.timedelta(minutes=5)) < timezone.localtime(timezone.now()):
-                return Response({'valid': False, 'message': 'El código QR ha expirado'}, status=403)
+                print("El código QR ha expirado")
+                return Response({'success': False, 'message': 'El código QR ha expirado'}, status=403)
             promocion = Promocion.objects.get(id=codigo_qr.id_promocion.id, id_negocio_id=id_negocio)
             if not promocion:
-                return Response({'valid': False, 'message': 'La promoción no pertenece a su negocio'}, status=403)
+                print("La promoción no pertenece a su negocio")
+                return Response({'success': False, 'message': 'La promoción no pertenece a su negocio'}, status=403)
             codigo_qr.utilizado = True
             codigo_qr.save()
-            return Response({'valid': True, 'id_canje': codigo_qr.id}, status=200)
+            print("Código QR validado correctamente")
+            return Response({'success': True, 'id_canje': codigo_qr.id}, status=200)
         except CodigoQR.DoesNotExist:
-            return Response({'valid': False, 'message': 'Código QR no válido'}, status=404)
+            print("Código QR no válido")
+            return Response({'success': False, 'message': 'Código QR no válido'}, status=404)
