@@ -1,7 +1,9 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
-from ...models import CodigoQR, Negocio, Promocion
+from rest_framework import status
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from ...models import CodigoQR, Negocio, Promocion, AdministradorNegocio
+from login.models import User
 from django.utils import timezone
 from .serializers import NegocioSerializer, PromocionSerializer
 from django.db.models import Q
@@ -14,10 +16,11 @@ class CodigoQRView(APIView):
         id_promocion = request.data.get('id_promocion')
         codigo_qr = CodigoQR.objects.create(
             id_usuario_id=id_usuario,
+            id_promocion_id=id_promocion,
             codigo=f"QR-{id_usuario}-{id_promocion}",
             fecha_creado=timezone.now()
         )
-        return Response({'id_canje': codigo_qr.id, 'message': codigo_qr.codigo}, status=201)
+        return Response({'id_canje': codigo_qr.id, 'message': codigo_qr.codigo, 'fecha_creado': timezone.localtime(codigo_qr.fecha_creado)}, status=201)
 
 class ListNegociosView(APIView):
     permission_classes = [AllowAny]
@@ -49,3 +52,4 @@ class ListPromocionesView(APIView):
         promociones = Promocion.objects.all()
         serializer = PromocionSerializer(promociones, many=True)
         return Response(serializer.data, status=200)
+

@@ -207,8 +207,10 @@ class Usuario(models.Model):
 class CodigoQR(models.Model):
     id = models.BigAutoField(primary_key=True)
     id_usuario = models.ForeignKey(Usuario, models.DO_NOTHING, db_column='id_usuario')
+    id_promocion = models.ForeignKey(Promocion, models.DO_NOTHING, db_column='id_promocion')
     codigo = models.TextField()
-    fecha_creado = models.DateTimeField()
+    fecha_creado = models.DateTimeField(auto_now_add=True)
+    utilizado = models.BooleanField(default=False)
 
     class Meta:
         # managed = False

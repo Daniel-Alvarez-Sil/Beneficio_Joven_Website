@@ -119,13 +119,14 @@ class UploadFileView(APIView):
         # Always include a presigned URL (works even if private)
         try:
             presigned_url = s3.generate_presigned_url(
-                "get_object", Params={"Bucket": bucket, "Key": key}, ExpiresIn=10000
+                "get_object", Params={"Bucket": bucket, "Key": key}
             )
         except ClientError:
             presigned_url = None
         
         # Fin, todo fue exitoso
-        result.imagen = public_url
+        print("Returning response with URLs.")
+        result.imagen = key
         result.save()
         return Response(serializer.to_representation(result), status=status.HTTP_201_CREATED)
         

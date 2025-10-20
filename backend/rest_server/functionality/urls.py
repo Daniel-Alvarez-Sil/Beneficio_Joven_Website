@@ -1,15 +1,21 @@
 from django.urls import path
+
+# Administrador View
 from .views import (AdministradorNegocioCreateView, PromocionListView, 
                     PromocionDeleteView, PromocionUpdateView, PromocionCreateView, 
                     EstadisticasNegocioView)
 
+# Colaboradores Views
 from .views import (PromocionesPorNegocioUltimoMes, SolicitudNegocioListView, CanjesPorNegocioLastMonthView,
                     TotalColaboradoresView, PromocionesActivasPorNegocioAPIView, 
                     EstadisticasHeaderView, NegociosResumenView)
 
+# Usuarios Views
 from .views import (CodigoQRView, ListNegociosView, ListPromocionesView)
-
 from .views import PromocionCreateImageUploadView
+
+# Cajeros Views
+from .views import validarQRView
 
 urlpatterns = [
     path("administradores-negocio/", AdministradorNegocioCreateView.as_view(), name="administrador-negocio-create"),
@@ -32,5 +38,7 @@ urlpatterns = [
     path("usuario/list/promociones/", ListPromocionesView.as_view(), name="list-promociones"),
     # Imagenes para pruebas
     # path("imagenes/upload/", UploadFileView.as_view(), name="upload-file"),
+    # Cajeros
+    path("cajero/validar-qr/", validarQRView.as_view(), name="validar-qr"),
 ]
 
