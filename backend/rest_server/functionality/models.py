@@ -37,8 +37,8 @@ class Apartado(models.Model):
     id_usuario = models.ForeignKey('Usuario', models.DO_NOTHING, db_column='id_usuario')
     fecha_creado = models.DateTimeField()
     fecha_vigencia = models.DateTimeField(blank=True, null=True)
-    estatus = models.CharField(max_length=20, blank=True, null=True)
-    url = models.TextField(blank=True, null=True)
+    estatus = models.CharField(choices=[("sin canjear", "Sin Canjear"), ("canjeado", "Canjeado")], blank=True, null=True)
+    # url = models.TextField(blank=True, null=True)
 
     class Meta:
         # managed = False
@@ -100,6 +100,7 @@ class Negocio(models.Model):
     municipio = models.CharField(max_length=120, blank=True, null=True)
     estado = models.CharField(max_length=120, blank=True, null=True)
     logo = models.ImageField(max_length=500, blank=True, null=True)
+    url_maps = models.TextField(blank=True, null=True)
 
     class Meta:
         # managed = False

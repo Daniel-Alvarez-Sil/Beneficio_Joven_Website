@@ -16,7 +16,7 @@ from .utils.cajeros.cajeros import (validarQRView)
 # Usuarios Views
 from .utils.usuarios.usuarios import (CodigoQRView, ListNegociosView, ListPromocionesView, SuscripcionANegocioView,
                                       ListPromocionSuscripcionesView, ListCategoriasView, ListUsuarioInfoView, 
-                                      NegocioAndPromocionesViews)
+                                      NegocioAndPromocionesViews, ApartarPromocionView, ListPromocionesApartadasView)
 
 # Imagenes Upload Views
 from .utils.imagenes.imagenes import (UploadPromocionWithFileView as PromocionCreateImageUploadView,

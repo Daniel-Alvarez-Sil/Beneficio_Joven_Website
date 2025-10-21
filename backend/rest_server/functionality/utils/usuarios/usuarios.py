@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from ...models import CodigoQR, Negocio, Promocion, AdministradorNegocio, Suscripcion, Categoria, Usuario
+from ...models import CodigoQR, Negocio, Promocion, AdministradorNegocio, Suscripcion, Categoria, Usuario, Apartado
 from login.models import User
 from django.utils import timezone
 from .serializers import NegocioSerializer, PromocionSerializer, CategoriaSerializer, UsuarioSerializer
@@ -127,3 +127,31 @@ class NegocioAndPromocionesViews(APIView):
             return Response(data, status=200)
         except Negocio.DoesNotExist:
             return Response({'detail': 'Negocio no encontrado.'}, status=404)
+        
+class ApartarPromocionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        id_usuario = request.user.id
+        id_promocion = request.data.get('id_promocion')
+        try:
+            apartado = Apartado.objects.create(
+                id_usuario_id=id_usuario,
+                id_promocion_id=id_promocion,
+                fecha_creado=timezone.now(),
+                fecha_vigencia=None,
+                estatus='sin canjear'
+            )
+            return Response({'message': 'Promoción apartada exitosamente.', 'id_apartado': apartado.id}, status=201)
+        except Exception as e:
+            return Response({'detail': 'Error al apartar la promoción.'}, status=400)
+        
+class ListPromocionesApartadasView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        id_usuario = request.user.id
+        apartados = Apartado.objects.filter(id_usuario_id=id_usuario)
+        promociones = Promocion.objects.filter(id__in=[a.id_promocion_id for a in apartados])
+        serializer = PromocionSerializer(promociones, many=True)
+        return Response(serializer.data, status=200)
