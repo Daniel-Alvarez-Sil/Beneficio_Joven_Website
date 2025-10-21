@@ -6,6 +6,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ColaboradorHeader } from '@/components/ColaboradorHeader';
 import { ColaboradorDashboard } from '@/components/ColaboradorDashboard';
 import { ColaboradorPromociones } from '@/components/ColaboradorPromocion';
+import { ColaboradorCajero } from '@/components/ColaboradorCajero';
 
 type User = { name: string; email: string; type: 'admin' | 'colaborador' };
 
@@ -21,6 +22,8 @@ export default function App() {
     setCurrentUser(null);
     router.push('/');
   };
+
+  const idNegocio = '3'; // ⬅️ cámbialo cuando lo obtengas de tu store/auth
 
   return (
     <div className="relative min-h-screen text-white">
@@ -48,7 +51,7 @@ export default function App() {
               value="dashboard"
               className="
                 rounded-xl px-6 py-3
-                text-sm font-medium text-white/85
+                text-sm font-medium text-white/80
                 data-[state=active]:bg-white/25
                 data-[state=active]:text-white
                 hover:bg-white/15
@@ -62,7 +65,7 @@ export default function App() {
               value="promos"
               className="
                 rounded-xl px-6 py-3
-                text-sm font-medium text-white/85
+                text-sm font-medium text-white/80
                 data-[state=active]:bg-white/25
                 data-[state=active]:text-white
                 hover:bg-white/15
@@ -71,6 +74,21 @@ export default function App() {
             >
               Promociones
             </TabsTrigger>
+
+            {/* ⬇️ Nuevo tab Cajero */}
+            <TabsTrigger
+              value="cajero"
+              className="
+                rounded-xl px-6 py-3
+                text-sm font-medium text-white/80
+                data-[state=active]:bg-white/25
+                data-[state=active]:text-white
+                hover:bg-white/15
+                transition-all
+              "
+            >
+              Cajero
+            </TabsTrigger>
           </TabsList>
 
           {/* Contenido */}
@@ -78,12 +96,23 @@ export default function App() {
             <ColaboradorDashboard
               onLogout={handleLogout}
               colaboradorName={currentUser?.name ?? 'Colaborador'}
+              idNegocio={idNegocio}
             />
           </TabsContent>
 
           <TabsContent value="promos" className="mt-8">
             <ColaboradorPromociones
               colaboradorName={currentUser?.name ?? 'Colaborador'}
+              onLogout={handleLogout}
+              idNegocio={idNegocio}
+            />
+          </TabsContent>
+
+          {/* ⬇️ Contenido Cajero */}
+          <TabsContent value="cajero" className="mt-8">
+            <ColaboradorCajero
+              colaboradorName={currentUser?.name ?? 'Colaborador'}
+              idNegocio={idNegocio}
             />
           </TabsContent>
         </Tabs>

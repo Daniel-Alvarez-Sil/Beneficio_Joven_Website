@@ -1,6 +1,7 @@
 import { Card, CardContent } from "./ui/card";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 
+
 interface AuthLayoutProps {
   children: React.ReactNode;
   title: string;
@@ -16,7 +17,6 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
 
       <div className="container mx-auto px-4 py-10">
         <div className="grid gap-10 md:grid-cols-2 items-center">
-          {/* Izquierda: Título/claim y logo (sin ícono manzana) */}
           <div className="order-2 md:order-1 flex flex-col justify-center">
             <div className="max-w-xl space-y-6">
               <h1 className="text-4xl md:text-5xl font-semibold tracking-tight leading-tight text-white/80">
@@ -34,13 +34,14 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
                 <li>• Paneles separados para Administrador y Colaborador</li>
               </ul>
 
-              <div className="w-full max-w-md">
-                <ImageWithFallback
-                  src="https://i.postimg.cc/RFm84vsD/beneficio-joven-logo.png"
+              <div className="w-full flex justify-center mt-10 md:mt-16 lg:mt-24">
+                <img
+                  src="beneficio-joven-logo.svg"
                   alt="Beneficio Joven"
-                  className="w-full h-auto object-contain opacity-90"
+                  className="h-40 md:h-56 lg:h-72 w-auto object-contain opacity-95"
                 />
               </div>
+
             </div>
           </div>
 
