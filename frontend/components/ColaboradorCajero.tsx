@@ -1,354 +1,433 @@
+// /components/ColaboradorCajero.tsx
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getCajeros, type Cajero } from "@/actions/colaboradores/get-cajeros";
+import { createCajero, type NewCajeroPayload } from "@/actions/colaboradores/create-cajeros"; // ✅ import correcto
+
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Badge } from "./ui/badge";
 import { Label } from "./ui/label";
-import { Switch } from "./ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
-import { Camera, CameraOff, ImagePlus, Loader2, QrCode, ScanLine, CheckCircle2, XCircle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./ui/dialog";
+import {
+  Loader2,
+  UserCircle2,
+  Mail,
+  Phone,
+  Copy,
+  Plus,
+  Search,
+} from "lucide-react";
 
-type ScanStatus = "valido" | "invalido" | "usado" | "desconocido";
+type Props = {
+  colaboradorName: string;
+  idNegocio?: string | number; // si lo envías, se agrega al payload del create
+};
 
-interface ScanResult {
-  id: string;                 // el texto leído (código/qr)
-  status: ScanStatus;         // mock por ahora
-  promo?: string;             // mock: nombre de promo
-  timestamp: string;          // ISO string
-  monto?: number;             // mock
+function fullName(c: Cajero) {
+  return `${c.nombre} ${c.apellido_paterno ?? ""} ${c.apellido_materno ?? ""}`
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-const supportsBarcode =
-  typeof window !== "undefined" &&
-  (window as any).BarcodeDetector &&
-  Array.isArray((window as any).BarcodeDetector.getSupportedFormats);
+export function ColaboradorCajero({ colaboradorName, idNegocio }: Props) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [cajeros, setCajeros] = useState<Cajero[]>([]);
+  const [q, setQ] = useState("");
 
-export function ColaboradorCajero({
-  colaboradorName,
-  idNegocio = "3",
-}: {
-  colaboradorName: string;
-  idNegocio?: string;
-}) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const detectorRef = useRef<any>(null);
+  // ---- Estado del Dialog "Nuevo cajero" (igual patrón que Promociones) ----
+  const [openCreate, setOpenCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
 
-  const [camEnabled, setCamEnabled] = useState<boolean>(false);
-  const [usingBackCam, setUsingBackCam] = useState<boolean>(true);
-  const [isScanning, setIsScanning] = useState<boolean>(false);
-  const [manualCode, setManualCode] = useState<string>("");
+  // Campos del formulario
+  const [correo, setCorreo] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [apellidoP, setApellidoP] = useState("");
+  const [apellidoM, setApellidoM] = useState("");
+  const [usuario, setUsuario] = useState("");
+  const [contrasena, setContrasena] = useState("");
 
-  const [results, setResults] = useState<ScanResult[]>([]);
-  const [openQuickCreate, setOpenQuickCreate] = useState(false);
-
-  // Mock: decidir estado de un código “escaneado”
-  const evaluateCode = (code: string): ScanResult => {
-    // Lógica de demo: patrón tonto solo para UI
-    const lower = code.toLowerCase();
-    let status: ScanStatus = "desconocido";
-    if (lower.includes("ok") || lower.startsWith("bj-") || lower.match(/\d{4,}/)) status = "valido";
-    if (lower.includes("used")) status = "usado";
-    if (lower.includes("bad") || lower.includes("x")) status = "invalido";
-
-    const promo = status === "valido" ? "Promo demo (2x1)" : undefined;
-    const monto = status === "valido" ? 120 : undefined;
-
-    return {
-      id: code,
-      status,
-      promo,
-      monto,
-      timestamp: new Date().toISOString(),
-    };
-  };
-
-  // Iniciar / detener cámara
-  const startCamera = async () => {
-    try {
-      const constraints: MediaStreamConstraints = {
-        video: {
-          facingMode: usingBackCam ? { ideal: "environment" } : { ideal: "user" },
-        },
-        audio: false,
-      };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
-      setCamEnabled(true);
-      setIsScanning(true);
-    } catch (e) {
-      console.error(e);
-      setCamEnabled(false);
-      setIsScanning(false);
-    }
-  };
-
-  const stopCamera = () => {
-    setIsScanning(false);
-    setCamEnabled(false);
-    if (videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.srcObject = null;
-    }
-    if (streamRef.current) {
-      for (const track of streamRef.current.getTracks()) track.stop();
-      streamRef.current = null;
-    }
-  };
-
-  // Loop de detección con BarcodeDetector (si existe)
+  // Cargar lista
   useEffect(() => {
-    let raf = 0;
-    let canceled = false;
-
-    const tick = async () => {
-      if (!isScanning || !videoRef.current) {
-        raf = requestAnimationFrame(tick);
-        return;
-      }
-
+    let mounted = true;
+    (async () => {
+      setLoading(true);
+      setError(null);
       try {
-        if (!detectorRef.current) {
-          const formats = await (window as any).BarcodeDetector.getSupportedFormats?.();
-          detectorRef.current = new (window as any).BarcodeDetector({ formats });
-        }
-        const bitmap = await createImageBitmap(videoRef.current);
-        const codes = await detectorRef.current.detect(bitmap);
-        bitmap.close();
+        const data = await getCajeros();
+        if (!mounted) return;
 
-        if (Array.isArray(codes) && codes.length > 0) {
-          const text = String(codes[0]?.rawValue ?? "").trim();
-          if (text) {
-            setIsScanning(false); // pausa rápida para no duplicar
-            const r = evaluateCode(text);
-            setResults((prev) => [r, ...prev].slice(0, 20));
-            // reanudar después de un pequeño delay para permitir mostrar feedback
-            setTimeout(() => setIsScanning(true), 600);
-          }
-        }
-      } catch {
-        // Ignora errores transitorios del detector
+        const uniq = new Map<number, Cajero>();
+        (data ?? []).forEach((c) => uniq.set(c.id, c));
+        const list = Array.from(uniq.values()).sort((a, b) =>
+          fullName(a).localeCompare(fullName(b), "es")
+        );
+        setCajeros(list);
+      } catch (e: any) {
+        setError(e?.message ?? "Ocurrió un error al obtener cajeros");
+      } finally {
+        if (mounted) setLoading(false);
       }
-      if (!canceled) raf = requestAnimationFrame(tick);
-    };
-
-    raf = requestAnimationFrame(tick);
+    })();
     return () => {
-      canceled = true;
-      cancelAnimationFrame(raf);
+      mounted = false;
     };
-  }, [isScanning]);
+  }, [idNegocio]);
 
-  // Cambiar cámara (frontal/trasera)
-  const toggleFacing = async () => {
-    const next = !usingBackCam;
-    setUsingBackCam(next);
-    if (camEnabled) {
-      stopCamera();
-      await startCamera();
+  const filtered = useMemo(() => {
+    if (!q) return cajeros;
+    const needle = q.toLowerCase();
+    return cajeros.filter((c) => {
+      const blob = `${fullName(c)} ${c.usuario} ${c.correo} ${c.telefono}`.toLowerCase();
+      return blob.includes(needle);
+    });
+  }, [cajeros, q]);
+
+  // Validación simple
+  const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+  const formInvalid =
+    !nombre.trim() ||
+    !apellidoP.trim() ||
+    !usuario.trim() ||
+    !isEmail(correo.trim()) || // 👈 importante: trim
+    !contrasena.trim();
+
+  // Submit crear cajero
+  const handleCreateCajero = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (formInvalid) {
+      setError(
+        "Revisa los campos: nombre, apellido paterno, usuario, correo válido y contraseña son obligatorios."
+      );
+      return;
+    }
+
+    const payload: NewCajeroPayload = {
+      correo: correo.trim(),
+      telefono: telefono.trim(),
+      nombre: nombre.trim(),
+      apellido_paterno: apellidoP.trim(),
+      apellido_materno: apellidoM.trim(),
+      usuario: usuario.trim(),
+      contrasena: contrasena, // no se muestra en UI
+      ...(idNegocio ? { id_negocio: Number(idNegocio) } : {}), // opcional
+    };
+
+    setCreating(true);
+    try {
+      await createCajero(payload);
+
+      // Refetch
+      const data = await getCajeros();
+      const uniq = new Map<number, Cajero>();
+      (data ?? []).forEach((c) => uniq.set(c.id, c));
+      setCajeros(
+        Array.from(uniq.values()).sort((a, b) =>
+          fullName(a).localeCompare(fullName(b), "es")
+        )
+      );
+
+      // Limpiar y cerrar
+      setCorreo("");
+      setTelefono("");
+      setNombre("");
+      setApellidoP("");
+      setApellidoM("");
+      setUsuario("");
+      setContrasena("");
+      setOpenCreate(false);
+    } catch (err: any) {
+      setError(err?.message ?? "No se pudo crear el cajero. Intenta de nuevo.");
+    } finally {
+      setCreating(false);
     }
   };
 
-  // Fallback: subir imagen con código (simplemente leemos el nombre como demo)
-  const onUploadImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    // En un caso real usarías un detector sobre el bitmap de la imagen.
-    const mockText = file.name.replace(/\.[^.]+$/, "");
-    const r = evaluateCode(mockText);
-    setResults((prev) => [r, ...prev].slice(0, 20));
-  };
-
-  const onManualSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const code = manualCode.trim();
-    if (!code) return;
-    const r = evaluateCode(code);
-    setResults((prev) => [r, ...prev].slice(0, 20));
-    setManualCode("");
+  // Al abrir el diálogo, limpia estados
+  const handleOpenChange = (open: boolean) => {
+    setOpenCreate(open);
+    if (open) {
+      setError(null);
+      setCorreo("");
+      setTelefono("");
+      setNombre("");
+      setApellidoP("");
+      setApellidoM("");
+      setUsuario("");
+      setContrasena("");
+    }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Tarjeta: escáner */}
-      <Card className="glass border border-white/15">
-        <CardHeader className="flex items-center justify-between flex-wrap gap-3">
-          <CardTitle className="text-white flex items-center gap-2">
-            <ScanLine className="w-5 h-5" />
-            Escanear promoción
-          </CardTitle>
+    <div className="min-h-screen relative text-white">
+      {/* Fondo igual que Promociones */}
+      <div className="auth-aurora" />
+      <div className="auth-stars" />
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="camSwitch" className="text-white/70 text-sm">Cámara</Label>
-              <Switch id="camSwitch" checked={camEnabled} onCheckedChange={(v) => (v ? startCamera() : stopCamera())}/>
-            </div>
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        {/* Encabezado + acciones */}
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-medium">Cajeros</h2>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleFacing}
-              disabled={!camEnabled}
-              className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-              title="Cambiar cámara (frontal/trasera)"
-            >
-              {usingBackCam ? <Camera className="w-4 h-4" /> : <CameraOff className="w-4 h-4" />}
-              <span className="ml-2 hidden sm:inline">Cambiar</span>
-            </Button>
-          </div>
-        </CardHeader>
-
-        <CardContent className="grid lg:grid-cols-2 gap-6">
-          {/* Vista de cámara o fallback */}
-          <div className="space-y-3">
-            <div className="aspect-video rounded-xl overflow-hidden border border-white/15 bg-black/50 grid place-items-center">
-              {supportsBarcode ? (
-                <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />
-              ) : (
-                <div className="p-6 text-center text-white/70">
-                  <QrCode className="w-8 h-8 mx-auto mb-3" />
-                  Tu navegador no soporta BarcodeDetector. Usa el botón para subir una imagen con un código o ingresa el código manualmente.
-                </div>
-              )}
-            </div>
-
-            {!supportsBarcode && (
-              <div className="flex items-center justify-between gap-3">
-                <Label className="text-white/70 text-sm">Subir imagen</Label>
-                <div>
-                  <label className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-white/10 border border-white/20 cursor-pointer">
-                    <ImagePlus className="w-4 h-4" />
-                    <span>Seleccionar archivo</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={onUploadImage}/>
-                  </label>
-                </div>
-              </div>
-            )}
-
-            {/* Manual */}
-            <form onSubmit={onManualSubmit} className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-white/70" />
               <Input
-                value={manualCode}
-                onChange={(e) => setManualCode(e.target.value)}
-                placeholder="Pega o escribe el código aquí…"
-                className="bg-white/10 border-white/30 text-white placeholder-white/60"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Buscar por nombre, usuario, correo…"
+                className="pl-8 w-64 input-apple text-white placeholder-white/60 caret-white"
               />
-              <Button type="submit" className="btn-gradient btn-apple text-white">Validar</Button>
-            </form>
-          </div>
+            </div>
 
-          {/* Resultados y acciones */}
-          <div className="space-y-4">
-            <Card className="glass border border-white/15">
-              <CardHeader className="py-4">
-                <CardTitle className="text-sm text-white/70">Últimos escaneos</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 max-h-[320px] overflow-auto pr-1">
-                {results.length === 0 ? (
-                  <div className="text-sm text-white/60">Aún no hay lecturas.</div>
-                ) : results.map((r, idx) => (
-                  <div key={idx} className="flex items-center justify-between gap-3 rounded-lg border border-white/10 p-3 bg-white/5">
-                    <div className="min-w-0">
-                      <div className="font-medium text-white/90 truncate">{r.id}</div>
-                      <div className="text-xs text-white/60">
-                        {new Date(r.timestamp).toLocaleString("es-MX")}
-                      </div>
-                      {r.promo && (
-                        <div className="text-xs text-white/70 mt-1">Promo: {r.promo} {r.monto ? `• $${r.monto}` : ""}</div>
-                      )}
+            {/* Botón + Dialog (mismo patrón visual que Promociones) */}
+            <Dialog open={openCreate} onOpenChange={handleOpenChange}>
+              <DialogTrigger asChild>
+                <Button className="gap-2 btn-gradient btn-apple text-white">
+                  <Plus className="h-4 w-4" />
+                  Nuevo cajero
+                </Button>
+              </DialogTrigger>
+
+              <DialogContent className="max-w-2xl glass-alt border border-white/20 text-white">
+                <DialogHeader>
+                  <DialogTitle>Crear cajero</DialogTitle>
+                  <DialogDescription>
+                    Completa los datos del cajero. Los campos marcados como obligatorios deben estar completos.
+                  </DialogDescription>
+                </DialogHeader>
+
+                {/* Banner de error (como en Promociones) */}
+                {error ? (
+                  <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    {error}
+                  </div>
+                ) : null}
+
+                <form onSubmit={handleCreateCajero} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Nombre *</Label>
+                      <Input
+                        value={nombre}
+                        onChange={(e) => setNombre(e.target.value)}
+                        placeholder="Ana"
+                        required
+                        className="input-apple text-white placeholder-white/60 caret-white"
+                      />
                     </div>
-                    <div className="shrink-0 flex items-center gap-2">
-                      {r.status === "valido" && (
-                        <Badge className="bg-emerald-600/80 gap-1">
-                          <CheckCircle2 className="w-3 h-3" /> Válido
-                        </Badge>
-                      )}
-                      {r.status === "invalido" && (
-                        <Badge className="bg-red-600/80 gap-1">
-                          <XCircle className="w-3 h-3" /> Inválido
-                        </Badge>
-                      )}
-                      {r.status === "usado" && (
-                        <Badge className="bg-amber-600/80">Usado</Badge>
-                      )}
-                      {r.status === "desconocido" && (
-                        <Badge variant="secondary" className="bg-white/10">Desconocido</Badge>
-                      )}
+
+                    <div className="space-y-2">
+                      <Label>Apellido paterno *</Label>
+                      <Input
+                        value={apellidoP}
+                        onChange={(e) => setApellidoP(e.target.value)}
+                        placeholder="Pérez"
+                        required
+                        className="input-apple text-white placeholder-white/60 caret-white"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Apellido materno</Label>
+                      <Input
+                        value={apellidoM}
+                        onChange={(e) => setApellidoM(e.target.value)}
+                        placeholder="García"
+                        className="input-apple text-white placeholder-white/60 caret-white"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Usuario *</Label>
+                      <Input
+                        value={usuario}
+                        onChange={(e) => setUsuario(e.target.value)}
+                        placeholder="anaperez"
+                        required
+                        className="input-apple text-white placeholder-white/60 caret-white"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Correo *</Label>
+                      <Input
+                        type="email"
+                        value={correo}
+                        onChange={(e) => setCorreo(e.target.value)}
+                        placeholder="ana.perez@example.com"
+                        required
+                        className="input-apple text-white placeholder-white/60 caret-white"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Teléfono</Label>
+                      <Input
+                        value={telefono}
+                        onChange={(e) => setTelefono(e.target.value)}
+                        placeholder="+52 55 1234 5678"
+                        className="input-apple text-white placeholder-white/60 caret-white"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2 space-y-2">
+                      <Label>Contraseña *</Label>
+                      <Input
+                        type="password"
+                        value={contrasena}
+                        onChange={(e) => setContrasena(e.target.value)}
+                        placeholder="MiPassw0rd!"
+                        required
+                        className="input-apple text-white placeholder-white/60 caret-white"
+                      />
+                      <p className="text-xs text-white/60">
+                        La contraseña no se mostrará en el listado por seguridad.
+                      </p>
                     </div>
                   </div>
-                ))}
-              </CardContent>
-            </Card>
 
-            <div className="flex items-center gap-3">
-              <Button
-                className="btn-gradient btn-apple text-white"
-                onClick={() => {
-                  // Simulación de “registrar canje” del último válido
-                  const lastValid = results.find(r => r.status === "valido");
-                  if (!lastValid) return;
-                  const ack: ScanResult = {
-                    ...lastValid,
-                    status: "usado", // demuéstrale al usuario que cambió a usado
-                    timestamp: new Date().toISOString(),
-                  };
-                  setResults(prev => [ack, ...prev]);
-                }}
-              >
-                Registrar canje (demo)
-              </Button>
-
-              <Button
-                variant="outline"
-                className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-                onClick={() => setOpenQuickCreate(true)}
-              >
-                Crear promoción rápida
-              </Button>
-            </div>
+                  <DialogFooter className="gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setOpenCreate(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={creating || formInvalid}
+                      className="btn-gradient btn-apple text-white"
+                    >
+                      {creating ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : null}
+                      Crear cajero
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Modal: crear promoción rápida (mock UI) */}
-      <Dialog open={openQuickCreate} onOpenChange={setOpenQuickCreate}>
-        <DialogContent className="glass-alt border border-white/20 text-white max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Crear promoción rápida</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>Nombre</Label>
-                <Input placeholder="Ej. 10% en mostrador" className="bg-white/10 border-white/30 text-white placeholder-white/60"/>
-              </div>
-              <div className="space-y-1">
-                <Label>Porcentaje</Label>
-                <Input type="number" step="0.01" placeholder="10.00" className="bg-white/10 border-white/30 text-white placeholder-white/60"/>
-              </div>
-              <div className="space-y-1 sm:col-span-2">
-                <Label>Descripción</Label>
-                <Input placeholder="Detalles…" className="bg-white/10 border-white/30 text-white placeholder-white/60"/>
-              </div>
-            </div>
-            <p className="text-xs text-white/60">
-              *Este formulario es demostrativo. Enlaza con tu flujo real de <code>createPromocion</code> cuando esté listo.
-            </p>
+        {/* Error global fuera del dialog */}
+        {error && !openCreate ? (
+          <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            {error}
           </div>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setOpenQuickCreate(false)}>Cancelar</Button>
-            <Button className="btn-gradient btn-apple text-white" onClick={() => setOpenQuickCreate(false)}>
-              Guardar (demo)
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        ) : null}
+
+        {loading ? (
+          <div className="flex items-center justify-center py-16 text-white/80">
+            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+            Cargando cajeros...
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="py-10 text-center text-sm text-white/70">
+            {q
+              ? "No hay cajeros que coincidan con tu búsqueda."
+              : "No hay cajeros por mostrar."}
+          </div>
+        ) : (
+          <section
+            aria-label="Listado de cajeros"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+          >
+            {filtered.map((c) => {
+              const name = fullName(c);
+              return (
+                <Card
+                  key={c.id}
+                  className="glass border border-white/15 hover:shadow-lg transition-shadow"
+                >
+                  <CardHeader className="flex flex-row items-start justify-between space-y-0">
+                    <div className="space-y-1">
+                      <CardTitle className="text-base text-white flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+                          <UserCircle2 className="w-4 h-4 text-white/80" />
+                        </div>
+                        <span className="line-clamp-1">{name}</span>
+                      </CardTitle>
+                      <Badge className="bg-white/20 text-white" variant="secondary">
+                        @{c.usuario}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="space-y-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-white/60">Correo</Label>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Mail className="w-4 h-4 text-white/70" />
+                        <span className="truncate text-white/80">{c.correo}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="ml-auto hover:bg-white/10"
+                          onClick={() => navigator.clipboard?.writeText(c.correo)}
+                          title="Copiar correo"
+                        >
+                          <Copy className="w-4 h-4 text-white/80" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs text-white/60">Teléfono</Label>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Phone className="w-4 h-4 text-white/70" />
+                        <span className="truncate text-white/80">{c.telefono}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="ml-auto hover:bg-white/10"
+                          onClick={() => navigator.clipboard?.writeText(c.telefono)}
+                          title="Copiar teléfono"
+                        >
+                          <Copy className="w-4 h-4 text-white/80" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs pt-1 text-white/70">
+                      <Badge
+                        variant="outline"
+                        className="bg-white/5 border-white/20 text-white/80"
+                      >
+                        Negocio #{c.id_negocio}
+                      </Badge>
+                      <Badge
+                        variant="outline"
+                        className="bg-white/5 border-white/20 text-white/80"
+                      >
+                        ID {c.id}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </section>
+        )}
+      </main>
     </div>
   );
 }
