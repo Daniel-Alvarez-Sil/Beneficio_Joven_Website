@@ -22,8 +22,10 @@ class NegocioForPromocionSerializer(serializers.ModelSerializer):
         fields = ['id', 'nombre', 'logo']
 
 class PromocionSerializer(serializers.ModelSerializer):
+    categorias = CategoriaWithPromocionSerializer(many=True, read_only=True)
     negocio_nombre = serializers.CharField(source='id_negocio.nombre', read_only=True)
     negocio_logo = serializers.ImageField(source='id_negocio.logo', read_only=True, allow_null=True)
+
 
     class Meta:
         model = Promocion
