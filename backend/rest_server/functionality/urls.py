@@ -3,16 +3,18 @@ from django.urls import path
 # Administrador View
 from .views import (AdministradorNegocioCreateView, PromocionListView, 
                     PromocionDeleteView, PromocionUpdateView, PromocionCreateView, 
-                    EstadisticasNegocioView, ReviewSolicitudNegocioAPIView)
+                    EstadisticasNegocioView, ReviewSolicitudNegocioAPIView, )
 
 # Colaboradores Views
 from .views import (PromocionesPorNegocioUltimoMes, SolicitudNegocioListView, CanjesPorNegocioLastMonthView,
                     TotalColaboradoresView, PromocionesActivasPorNegocioAPIView, 
-                    EstadisticasHeaderView, NegociosResumenView, CreateCajeroView)
+                    EstadisticasHeaderView, NegociosResumenView, CreateCajeroView, 
+                    ListAllCajerosView)
 
 # Usuarios Views
 from .views import (CodigoQRView, ListNegociosView, ListPromocionesView, SuscripcionANegocioView, 
-                    ListPromocionSuscripcionesView, ListCategoriasView, ListUsuarioInfoView)
+                    ListPromocionSuscripcionesView, ListCategoriasView, ListUsuarioInfoView, 
+                    NegocioAndPromocionesViews)
 
 # Imagenes Upload Views
 from .views import (PromocionCreateImageUploadView, NegocioCreateImageUploadView)
@@ -33,6 +35,7 @@ urlpatterns = [
     path("promociones/create/", PromocionCreateImageUploadView.as_view(), name="promocion-create"),
     path("promociones/estadisticas/", EstadisticasNegocioView.as_view(), name="estadisticas-negocio"),
     path("cajero/create/", CreateCajeroView.as_view(), name="create-cajero"),
+    path("cajeros/list/", ListAllCajerosView.as_view(), name="list-all-cajeros"),
 
     # Administradores
     path("solicitudes-negocio/list/", SolicitudNegocioListView.as_view(), name="solicitudes-negocio-list"),
@@ -52,6 +55,7 @@ urlpatterns = [
     path("usuario/list/promociones-suscripciones/", ListPromocionSuscripcionesView.as_view(), name="list-promocion-suscripciones"),
     path("usuario/list/categorias/", ListCategoriasView.as_view(), name="list-categorias"),
     path("usuario/info/", ListUsuarioInfoView.as_view(), name="list-usuario-info"),
+    path("usuario/negocio-y-promociones/", NegocioAndPromocionesViews.as_view(), name="negocio-and-promociones"),
     # Imagenes para pruebas
     # path("imagenes/upload/", UploadFileView.as_view(), name="upload-file"),
 

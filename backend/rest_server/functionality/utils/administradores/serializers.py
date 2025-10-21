@@ -1,11 +1,16 @@
 
 from rest_framework import serializers
-from ...models import SolicitudNegocio, Negocio
+from ...models import SolicitudNegocio, Negocio, Cajero
 
 class NegocioMiniSerializer(serializers.ModelSerializer):
     class Meta:
         model = Negocio
         fields = ("id", "nombre", "correo", "telefono", "estatus")
+
+class CajeroSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Cajero
+        fields = '__all__'
 
 class SolicitudNegocioSerializer(serializers.ModelSerializer):
     # Nested read-only data about the negocio

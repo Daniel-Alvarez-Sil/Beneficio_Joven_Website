@@ -16,7 +16,13 @@ class CategoriaWithPromocionSerializer(serializers.ModelSerializer):
         model = Categoria
         fields = ['titulo']
 
+class NegocioForPromocionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Negocio
+        fields = ['id', 'nombre', 'logo']
+
 class PromocionSerializer(serializers.ModelSerializer):
+    id_negocio = NegocioForPromocionSerializer(read_only=True)
     categorias = CategoriaWithPromocionSerializer(many=True, read_only=True)
 
     class Meta:

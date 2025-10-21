@@ -1,8 +1,8 @@
 from rest_framework import permissions, status
 from rest_framework.generics import ListAPIView
-from ...models import SolicitudNegocio, Promocion, Canje, Negocio, AdministradorNegocio, Administrador, SolicitudNegocioDetalle
+from ...models import SolicitudNegocio, Promocion, Canje, Negocio, AdministradorNegocio, Administrador, SolicitudNegocioDetalle, Cajero
 from login.models import User
-from .serializers import SolicitudNegocioSerializer
+from .serializers import SolicitudNegocioSerializer, CajeroSerializer
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
@@ -11,6 +11,8 @@ from rest_framework.response import Response
 from django.db.models import (
     Count, FloatField, Subquery, OuterRef, F, Value, Case, When
 )
+from django.db.models import Q
+
 
 class SolicitudNegocioListView(ListAPIView):
     """
@@ -291,3 +293,13 @@ class NegociosResumenView(APIView):
         ]
         return Response(data)
 
+class ListAllCajerosView(APIView):
+    permission_classes = [permissions.AllowAny]  # adjust as needed
+    def get(self, request, *args, **kwargs):
+        user = request.user.username
+        AdministradorNegocio_obj = AdministradorNegocio.objects.filter(Q(correo__iexact=user) | Q(usuario__iexact=user)).first()
+        id_negocio = AdministradorNegocio_obj.id
+
+        cajeros = Cajero.objects.filter(id_negocio_id=id_negocio)
+        serializer = CajeroSerializer(cajeros, many=True)
+        return Response(serializer.data)

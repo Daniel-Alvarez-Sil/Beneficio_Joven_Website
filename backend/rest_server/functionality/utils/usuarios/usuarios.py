@@ -87,6 +87,9 @@ class ListCategoriasView(generics.ListAPIView):
     serializer_class = CategoriaSerializer
     queryset = Categoria.objects.all()
 
+    def get_queryset(self):
+        return Categoria.objects.all().order_by('id')
+
 class ListUsuarioInfoView(APIView):
     permission_classes = [AllowAny]
     
@@ -104,3 +107,23 @@ class ListUsuarioInfoView(APIView):
             return Response(serializer.data, status=200)
         except Usuario.DoesNotExist:
             return Response({'detail': 'Usuario no encontrado.'}, status=404)
+        
+class NegocioAndPromocionesViews(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        try:
+            id_negocio = request.query_params.get('id_negocio')
+            negocio = Negocio.objects.get(id=id_negocio)
+            promociones = Promocion.objects.filter(id_negocio_id=id_negocio)
+
+            negocio_serializer = NegocioSerializer(negocio)
+            promociones_serializer = PromocionSerializer(promociones, many=True)
+
+            data = {
+                'negocio': negocio_serializer.data,
+                'promociones': promociones_serializer.data
+            }
+            return Response(data, status=200)
+        except Negocio.DoesNotExist:
+            return Response({'detail': 'Negocio no encontrado.'}, status=404)

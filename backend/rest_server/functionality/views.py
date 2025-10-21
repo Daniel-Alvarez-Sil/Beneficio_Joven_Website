@@ -7,14 +7,16 @@ from .utils.colaboradores.colaboradores import (AdministradorNegocioCreateView, 
 from .utils.administradores.administradores import (SolicitudNegocioListView, 
                     PromocionesPorNegocioUltimoMes, CanjesPorNegocioLastMonthView, 
                     TotalColaboradoresView, PromocionesActivasPorNegocioAPIView,
-                    EstadisticasHeaderView, NegociosResumenView, ReviewSolicitudNegocioAPIView)
+                    EstadisticasHeaderView, NegociosResumenView, ReviewSolicitudNegocioAPIView,
+                    ListAllCajerosView)
 
 # Cajeros Views
 from .utils.cajeros.cajeros import (validarQRView)
 
 # Usuarios Views
 from .utils.usuarios.usuarios import (CodigoQRView, ListNegociosView, ListPromocionesView, SuscripcionANegocioView,
-                                      ListPromocionSuscripcionesView, ListCategoriasView, ListUsuarioInfoView)
+                                      ListPromocionSuscripcionesView, ListCategoriasView, ListUsuarioInfoView, 
+                                      NegocioAndPromocionesViews)
 
 # Imagenes Upload Views
 from .utils.imagenes.imagenes import (UploadPromocionWithFileView as PromocionCreateImageUploadView,

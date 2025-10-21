@@ -78,7 +78,7 @@ class AltaNegocioYAdminSerializer(serializers.Serializer):
         )
 
         User.objects.create_user(
-            username=admin_data["usuario"],
+            username=admin_data["correo"],
             password=admin_data["contrasena"],
             tipo="administrador"
         )
