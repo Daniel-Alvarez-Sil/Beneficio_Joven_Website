@@ -1,10 +1,9 @@
 // actions/colaboradores/registro_solicitud.ts
 'use server';
 
-import axios from 'axios';
 import type { RegistroPayload } from '@/components/types/registro';
 
-const apiHost = (process.env.API_HOST ?? '').replace(/\/+$/, ''); // http://localhost:8000
+const apiHost = (process.env.API_HOST ?? '').replace(/\/+$/, '');
 const URL = `${apiHost}/functionality/administradores-negocio/`;
 
 // util: dataURL -> File (Blob) con nombre y mime correctos
@@ -18,13 +17,10 @@ function dataURLtoFile(dataUrl: string, filenameBase = 'file_negocio') {
   return new File([blob], `${filenameBase}.${ext}`, { type: mime });
 }
 
-// arma FormData con claves "negocio.*" y "administrador.*"
 function buildFormData(payload: RegistroPayload): FormData {
   const fd = new FormData();
-
   const { administrador, negocio } = payload;
 
-  // el backend aún pide 'administrador.usuario' → derivamos del correo si no viene
   const usuario =
     (administrador as any).usuario ??
     administrador.correo?.split?.('@')?.[0] ??
@@ -46,9 +42,12 @@ function buildFormData(payload: RegistroPayload): FormData {
   fd.append('negocio.nombre', negocio.nombre);
   fd.append('negocio.rfc', negocio.rfc);
   if (negocio.sitio_web) fd.append('negocio.sitio_web', negocio.sitio_web);
-  if ((negocio as any).maps_url) fd.append('negocio.maps_url', (negocio as any).maps_url);
-  fd.append('negocio.estatus', negocio.estatus ?? 'En revision');
 
+  // 🔧 CLAVE CORRECTA:
+  const maps = (negocio as any).maps_url ?? (negocio as any).url_maps;
+  if (maps) fd.append('negocio.url_maps', maps);
+
+  fd.append('negocio.estatus', negocio.estatus ?? 'En revision');
   fd.append('negocio.cp', negocio.cp);
   fd.append('negocio.numero_ext', negocio.numero_ext);
   if (negocio.numero_int) fd.append('negocio.numero_int', negocio.numero_int);
@@ -56,13 +55,16 @@ function buildFormData(payload: RegistroPayload): FormData {
   fd.append('negocio.municipio', negocio.municipio);
   fd.append('negocio.estado', negocio.estado);
 
-  // file: preferimos enviar en "file" (como en tu Postman)
-  if (negocio.file?.startsWith?.('data:')) {
-    const file = dataURLtoFile(negocio.file);
+  // 🏷 origen del flujo
+  fd.append('creado_por_admin', 'false');
+
+  // ---- FILE (acepta file o logo en base64) ----
+  const base64 = (negocio as any).file ?? (negocio as any).logo;
+  if (base64?.startsWith?.('data:')) {
+    const file = dataURLtoFile(base64);
     if (file) fd.append('file', file, file.name);
-  } else if (negocio.file) {
-    // si traes URL, el backend puede aceptarla como texto
-    fd.append('negocio.file', negocio.file);
+  } else if ((negocio as any).file) {
+    fd.append('negocio.file', (negocio as any).file);
   }
 
   return fd;
@@ -70,11 +72,6 @@ function buildFormData(payload: RegistroPayload): FormData {
 
 type Resp = { ok: boolean; status: number; data?: any; error?: string };
 
-/**
- * Puede recibir:
- *  - FormData ya armado (ideal si lo construiste en route.ts), o
- *  - Un RegistroPayload para armar aquí el FormData.
- */
 export async function registrarSolicitud(formOrJson: FormData | RegistroPayload): Promise<Resp> {
   try {
     const body =
@@ -82,29 +79,27 @@ export async function registrarSolicitud(formOrJson: FormData | RegistroPayload)
         ? formOrJson
         : buildFormData(formOrJson as RegistroPayload);
 
-    const { data, status } = await axios.post(URL, body, {
-      // ¡NO pongas Content-Type! axios pone el boundary al enviar FormData
-      validateStatus: () => true,
-    });
+    // ✅ Usa fetch para evitar issues de boundary con axios en server
+    const resp = await fetch(URL, { method: 'POST', body });
+    const status = resp.status;
+    const text = await resp.text().catch(() => '');
 
     if (status >= 200 && status < 300) {
-      return { ok: true, data, status };
+      let data: any = null;
+      try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+      return { ok: true, status, data };
     }
-    const msg =
-      (typeof data === 'string' && data) ||
-      data?.message ||
-      data?.detail ||
-      JSON.stringify(data || {});
-    return { ok: false, status, error: msg || 'Error desconocido' };
+
+    return {
+      ok: false,
+      status,
+      error: text || 'Error desconocido',
+    };
   } catch (err: any) {
-    const status = err?.response?.status ?? 500;
-    const data = err?.response?.data;
-    const msg =
-      (typeof data === 'string' && data) ||
-      data?.message ||
-      data?.detail ||
-      err?.message ||
-      'Error interno';
-    return { ok: false, status, error: msg };
+    return {
+      ok: false,
+      status: err?.response?.status ?? 500,
+      error: err?.message ?? 'Error interno',
+    };
   }
 }

@@ -83,36 +83,76 @@ export function RegisterNegocioForm() {
     reader.readAsDataURL(file);
   };
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!admin) return;
+    if (!admin) {
+      alert('Faltan datos del administrador (Paso 1).');
+      return;
+    }
 
-    const payload: RegistroPayload = {
-      negocio: { ...form, estatus: 'En revision' },
-      administrador: admin,
-    };
+    // 1) Armamos FormData tal como en NegociosGrid.tsx
+    const fd = new FormData();
 
-    const res = await fetch('/api/solicitudes/registro', {
+    // --- ADMINISTRADOR ---
+    fd.append('administrador.correo', admin.correo ?? '');
+    fd.append('administrador.telefono', admin.telefono ?? '');
+    fd.append('administrador.nombre', admin.nombre ?? '');
+    fd.append('administrador.apellido_paterno', admin.apellido_paterno ?? '');
+    fd.append('administrador.apellido_materno', admin.apellido_materno ?? '');
+    // Para registro público no pides 'usuario'; puedes derivarlo del correo:
+    const usuarioSugerido =
+      (admin.correo?.split('@')?.[0] ?? admin.nombre ?? 'usuario').toLowerCase();
+    fd.append('administrador.usuario', usuarioSugerido);
+    fd.append('administrador.contrasena', admin.contrasena ?? '');
+
+    // --- NEGOCIO ---
+    fd.append('negocio.correo', form.correo ?? '');
+    fd.append('negocio.telefono', form.telefono ?? '');
+    fd.append('negocio.nombre', form.nombre ?? '');
+    fd.append('negocio.rfc', form.rfc ?? '');
+    fd.append('negocio.sitio_web', form.sitio_web ?? '');
+    fd.append('negocio.estatus', form.estatus ?? 'En revision');
+    fd.append('negocio.cp', form.cp ?? '');
+    fd.append('negocio.numero_ext', form.numero_ext ?? '');
+    fd.append('negocio.numero_int', form.numero_int ?? '');
+    fd.append('negocio.colonia', form.colonia ?? '');
+    fd.append('negocio.municipio', form.municipio ?? '');
+    fd.append('negocio.estado', form.estado ?? '');
+    fd.append('negocio.url_maps', (form as any).maps_url ?? '');
+
+    // --- LOGO opcional como 'file' ---
+    // Tú guardaste base64 en form.logo; lo convertimos a Blob para mandarlo como archivo:
+    if ((form as any).logo) {
+      try {
+        // truco: fetch del dataURL → Blob
+        const blob = await (await fetch((form as any).logo)).blob();
+        const name = logoFileName || 'logo.png';
+        fd.append('file', new File([blob], name, { type: blob.type || 'image/png' }));
+      } catch {}
+    }
+
+    // --- Bandera de origen ---
+    // En el panel de admin la ponías "true". Aquí es flujo público, así que "false".
+    fd.append('creado_por_admin', 'false');
+
+    // 2) POST a tu ruta que ya llama createColaborador (mismo TS)
+    const resp = await fetch('/api/create-colaborador', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-from-step': '2',
-      },
-      body: JSON.stringify(payload),
+      body: fd,
     });
 
-    if (res.ok) {
+    if (resp.ok) {
       localStorage.removeItem(LS_ADMIN_KEY);
       localStorage.removeItem(LS_NEGOCIO_KEY);
       setShowToast(true);
       setTimeout(() => {
         setShowToast(false);
+        // Gracias / success
         router.push('/registro/gracias');
-      }, 2500);
+      }, 1500);
     } else {
-      const err = await res.json().catch(() => ({}));
-      alert(err?.message ?? 'No se pudo enviar la solicitud.');
+      const { message } = await resp.json().catch(() => ({}));
+      alert(message ?? 'No se pudo registrar el colaborador.');
     }
   };
 
