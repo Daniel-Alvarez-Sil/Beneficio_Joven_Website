@@ -36,7 +36,7 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
 
               <div className="w-full flex justify-center mt-10 md:mt-16 lg:mt-24">
                 <img
-                  src="beneficio-joven-logo.svg"
+                  src="/beneficio-joven-logo.svg"
                   alt="Beneficio Joven"
                   className="h-40 md:h-56 lg:h-72 w-auto object-contain opacity-95"
                 />

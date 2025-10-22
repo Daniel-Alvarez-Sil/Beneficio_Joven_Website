@@ -76,16 +76,10 @@ export function RegisterAdminNegocioForm() {
           <Label htmlFor="correo">Correo</Label>
           <Input id="correo" type="email" value={form.correo} onChange={(e) => onChange('correo', e.target.value)} required className="input-apple text-white placeholder-white/50 caret-white" />
         </div>
-
-        <div className="grid md:grid-cols-2 gap-4 text-white">
-          <div className="space-y-2">
-            <Label htmlFor="usuario">Usuario</Label>
-            <Input id="usuario" value={form.usuario} onChange={(e) => onChange('usuario', e.target.value)} required className="input-apple text-white placeholder-white/50 caret-white" autoComplete="username" />
-          </div>
-          <div className="space-y-2 text-white">
-            <Label htmlFor="contrasena">Contraseña</Label>
-            <Input id="contrasena" type="password" value={form.contrasena} onChange={(e) => onChange('contrasena', e.target.value)} required className="input-apple text-white placeholder-white/50 caret-white" autoComplete="new-password" />
-          </div>
+          
+        <div className="space-y-2 text-white">
+          <Label htmlFor="contrasena">Contraseña</Label>
+          <Input id="contrasena" type="password" value={form.contrasena} onChange={(e) => onChange('contrasena', e.target.value)} required className="input-apple text-white placeholder-white/50 caret-white" autoComplete="new-password" />
         </div>
 
         <Button type="button" onClick={goToStep2} className="w-full btn-gradient btn-apple text-white">
