@@ -1,3 +1,4 @@
+// components/ColaboradorPromocion.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -22,6 +23,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogOverlay,
   DialogTitle,
   DialogTrigger,
 } from "./ui/dialog";
@@ -38,7 +40,8 @@ import {
   SelectValue,
 } from "./ui/select";
 
-import { Calendar as CalendarIcon, Gift, Loader2, Plus, Trash2 } from "lucide-react";
+import Image from "next/image";
+import { Calendar as CalendarIcon, Gift, Loader2, Plus, Trash2, Image as ImageIcon } from "lucide-react";
 
 import { logout } from "@/actions/login/auth";
 import { getPromociones, type Promocion } from "@/actions/colaboradores/get-promociones";
@@ -123,6 +126,11 @@ export function ColaboradorPromociones({
   const [horaInicio, setHoraInicio] = useState<string>("09:00");
   const [horaFin, setHoraFin] = useState<string>("21:00");
 
+  // Imagen
+  const [imagenFile, setImagenFile] = useState<File | null>(null);
+  const [imagenPreview, setImagenPreview] = useState<string | null>(null);
+  const [fileKey, setFileKey] = useState(0);
+
   // Mutually-exclusive logic (live)
   const pctNum = Number(porcentaje || "0");
   const prcNum = Number(precio || "0");
@@ -145,6 +153,13 @@ export function ColaboradorPromociones({
     })();
     return () => { mounted = false; };
   }, [idNegocio]);
+
+  useEffect(() => {
+  return () => {
+    if (imagenPreview) URL.revokeObjectURL(imagenPreview);
+    };
+  }, [imagenPreview]);
+
 
   const handleToggleActivo = async (id: number) => {
     setError(null);
@@ -175,15 +190,63 @@ export function ColaboradorPromociones({
     setPorcentaje(value);
     const v = Number(value || "0");
     if (isFinite(v) && v !== 0) {
-      setPrecio("0.00000"); // zero and disable precio
+      setPrecio("0.00000");
     }
   };
   const onChangePrecio = (value: string) => {
     setPrecio(value);
     const v = Number(value || "0");
     if (isFinite(v) && v !== 0) {
-      setPorcentaje("0.00"); // zero and disable porcentaje
+      setPorcentaje("0.00");
     }
+  };
+
+  // Imagen: validación + preview
+  const onSelectImagen: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+    const file = e.target.files?.[0] ?? null;
+    if (!file) {
+      setImagenFile(null);
+      setImagenPreview(null);
+      return;
+    }
+
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const maxMB = 5;
+    if (!validTypes.includes(file.type)) {
+      setError("La imagen debe ser JPG, PNG o WEBP.");
+      e.currentTarget.value = "";
+      return;
+    }
+    if (file.size > maxMB * 1024 * 1024) {
+      setError(`La imagen no debe exceder ${maxMB}MB.`);
+      e.currentTarget.value = "";
+      return;
+    }
+
+    setError(null);
+    setImagenFile(file);
+    const url = URL.createObjectURL(file);
+    setImagenPreview(url);
+  };
+
+  const resetForm = () => {
+    setNombre("");
+    setDescripcion("");
+    setLimitePorUsuario('');
+    setLimiteTotal('');
+    setPorcentaje("0.00");
+    setPrecio("0.00000");
+    setActivo(true);
+    setFechaInicioDate(today);
+    setFechaFinDate(today);
+    setHoraInicio("09:00");
+    setHoraFin("21:00");
+
+    if (imagenPreview) URL.revokeObjectURL(imagenPreview);
+    setImagenPreview(null);
+    setImagenFile(null);
+
+    setFileKey((k) => k + 1);
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -205,26 +268,31 @@ export function ColaboradorPromociones({
       return;
     }
 
-    // Enforce exclusivity on submit too (safety)
+    // Exclusividad en submit
     let pct = Number(porcentaje || "0");
     let prc = Number(precio || "0");
     if (pct !== 0) prc = 0;
     if (prc !== 0) pct = 0;
 
-    const payload = {
-      nombre: nombre.trim(),
-      descripcion: descripcion.trim(),
-      fecha_inicio: fi,
-      fecha_fin: ff,
-      limite_por_usuario: Number(limitePorUsuario || 0),
-      limite_total: Number(limiteTotal || 0),
-      porcentaje: Number(pct.toFixed(2)),   // "0.00"
-      precio: Number(prc.toFixed(5)),       // "0.00000"
-      activo,
-    };
+    // Construir FormData para incluir imagen (si hay)
+    const fd = new FormData();
+    fd.append("nombre", nombre.trim());
+    fd.append("descripcion", descripcion.trim());
+    fd.append("fecha_inicio", fi);
+    fd.append("fecha_fin", ff);
+    fd.append("limite_por_usuario", String(Number(limitePorUsuario || 0)));
+    fd.append("limite_total", String(Number(limiteTotal || 0)));
+    fd.append("porcentaje", String(Number(pct.toFixed(2))));
+    fd.append("precio", String(Number(prc.toFixed(5))));
+    fd.append("activo", String(activo ? 1 : 0));
+
+    // Si tu API espera un campo específico para el archivo, usa ese nombre (p.ej. "imagen")
+    if (imagenFile) {
+      fd.append("imagen", imagenFile); // <-- nombre del campo de archivo en tu backend
+    }
 
     setCreating(true);
-    const ok = await createPromocion(payload as any);
+    const ok = await createPromocion(fd);
     if (!ok) {
       setError("No se pudo crear la promoción. Intenta de nuevo.");
       setCreating(false);
@@ -236,18 +304,7 @@ export function ColaboradorPromociones({
       setPromos(data);
     } catch {}
 
-    setNombre("");
-    setDescripcion("");
-    setLimitePorUsuario('');
-    setLimiteTotal('');
-    setPorcentaje("0.00");
-    setPrecio("0.00000");
-    setActivo(true);
-    setFechaInicioDate(today);
-    setFechaFinDate(today);
-    setHoraInicio("09:00");
-    setHoraFin("21:00");
-
+    resetForm();
     setCreating(false);
     setOpenCreate(false);
   };
@@ -261,200 +318,237 @@ export function ColaboradorPromociones({
           <h2 className="text-lg font-medium">Promociones</h2>
 
           {/* Create button + dialog */}
-          <Dialog open={openCreate} onOpenChange={setOpenCreate}>
+          <Dialog open={openCreate} onOpenChange={(v)=>{ 
+            if (!v) resetForm();
+            setOpenCreate(v); }}>
             <DialogTrigger asChild>
               <Button className="gap-2 btn-gradient btn-apple text-white">
                 <Plus className="h-4 w-4" />
                 Nueva promoción
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl glass-alt border border-white/20 text-white">
-              <DialogHeader>
-                <DialogTitle>Crear promoción</DialogTitle>
-                <DialogDescription>
-                  Completa los campos y selecciona las fechas con el calendario.
-                </DialogDescription>
-              </DialogHeader>
+            <DialogOverlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"/>
+            <DialogContent className="max-w-2xl glass-alt border border-white/20 text-white max-h-[85vh] overflow-y-auto">
+              <div className="p-6">
+                <DialogHeader>
+                  <DialogTitle>Crear promoción</DialogTitle>
+                  <DialogDescription>
+                    Completa los campos, sube una imagen y selecciona fechas.
+                  </DialogDescription>
+                </DialogHeader>
 
-              {error ? (
-                <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                  {error}
-                </div>
-              ) : null}
-
-              <form onSubmit={handleCreate} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="nombre">Nombre</Label>
-                    <Input
-                      id="nombre"
-                      value={nombre}
-                      onChange={(e) => setNombre(e.target.value)}
-                      placeholder="Ej. Viernes 2x1"
-                      required
-                      className="input-apple text-white placeholder-white/60 caret-white"
-                    />
+                {error ? (
+                  <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    {error}
                   </div>
+                ) : null}
 
-                  <div className="space-y-2">
-                    <Label htmlFor="activo">Estatus</Label>
-                    <div className="flex items-center gap-3 h-10 px-3 rounded-md border">
-                      <Switch
-                        id="activo"
-                        checked={activo}
-                        onCheckedChange={setActivo}
+                <form onSubmit={handleCreate} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="nombre">Nombre</Label>
+                      <Input
+                        id="nombre"
+                        value={nombre}
+                        onChange={(e) => setNombre(e.target.value)}
+                        placeholder="Ej. Viernes 2x1"
+                        required
+                        className="input-apple text-white placeholder-white/60 caret-white"
                       />
-                      <span className="text-sm">{activo ? "Activo" : "Inactivo"}</span>
                     </div>
-                  </div>
 
-                  <div className="md:col-span-2 space-y-2">
-                    <Label htmlFor="descripcion">Descripción</Label>
-                    <Textarea
-                      id="descripcion"
-                      value={descripcion}
-                      onChange={(e) => setDescripcion(e.target.value)}
-                      placeholder="Detalles de la promoción…"
-                      rows={3}
-                      className="input-apple text-white placeholder-white/60 caret-white"
-                    />
-                  </div>
-
-                  {/* Calendars + time (shadcn Select) */}
-                  <div className="space-y-2">
-                    <Label>Fecha inicio</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button type="button" variant="outline" className="w-full justify-start gap-2 bg-white/10 border-white/30 text-white hover:bg-white/15">
-                          <CalendarIcon className="h-4 w-4" />
-                          {fechaInicioDate
-                            ? fechaInicioDate.toLocaleDateString("es-MX")
-                            : "Selecciona fecha"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="p-0">
-                        <Calendar
-                          mode="single"
-                          selected={fechaInicioDate ?? undefined}
-                          onSelect={(d) => setFechaInicioDate(d ?? null)}
-                          initialFocus
+                    <div className="space-y-2">
+                      <Label htmlFor="activo">Estatus</Label>
+                      <div className="flex items-center gap-3 h-10 px-3 rounded-md border">
+                        <Switch
+                          id="activo"
+                          checked={activo}
+                          onCheckedChange={setActivo}
                         />
-                      </PopoverContent>
-                    </Popover>
+                        <span className="text-sm">{activo ? "Activo" : "Inactivo"}</span>
+                      </div>
+                    </div>
 
-                    <div className="space-y-1">
-                      <Label className="text-xs">Hora inicio</Label>
-                      <Select value={horaInicio} onValueChange={setHoraInicio}>
-                        <SelectTrigger className="w-full bg-white/10 border-white/30 text-white">
-                          <SelectValue placeholder="Selecciona hora" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {TIME_OPTIONS.map((t) => (
-                            <SelectItem key={t} value={t}>{t}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <div className="md:col-span-2 space-y-2">
+                      <Label htmlFor="descripcion">Descripción</Label>
+                      <Textarea
+                        id="descripcion"
+                        value={descripcion}
+                        onChange={(e) => setDescripcion(e.target.value)}
+                        placeholder="Detalles de la promoción…"
+                        rows={3}
+                        className="input-apple text-white placeholder-white/60 caret-white"
+                      />
+                    </div>
+
+                    {/* Calendarios + horas */}
+                    <div className="space-y-2">
+                      <Label>Fecha inicio</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button type="button" variant="outline" className="w-full justify-start gap-2 bg-white/10 border-white/30 text-white hover:bg-white/15">
+                            <CalendarIcon className="h-4 w-4" />
+                            {fechaInicioDate
+                              ? fechaInicioDate.toLocaleDateString("es-MX")
+                              : "Selecciona fecha"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="p-0">
+                          <Calendar
+                            mode="single"
+                            selected={fechaInicioDate ?? undefined}
+                            onSelect={(d) => setFechaInicioDate(d ?? null)}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs">Hora inicio</Label>
+                        <Select value={horaInicio} onValueChange={setHoraInicio}>
+                          <SelectTrigger className="w-full bg-white/10 border-white/30 text-white">
+                            <SelectValue placeholder="Selecciona hora" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TIME_OPTIONS.map((t) => (
+                              <SelectItem key={t} value={t}>{t}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Fecha fin</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button type="button" variant="outline" className="w-full justify-start gap-2 bg-white/10 border-white/30 text-white hover:bg-white/15">
+                            <CalendarIcon className="h-4 w-4" />
+                            {fechaFinDate
+                              ? fechaFinDate.toLocaleDateString("es-MX")
+                              : "Selecciona fecha"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="p-0">
+                          <Calendar
+                            mode="single"
+                            selected={fechaFinDate ?? undefined}
+                            onSelect={(d) => setFechaFinDate(d ?? null)}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs">Hora fin</Label>
+                        <Select value={horaFin} onValueChange={setHoraFin}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Selecciona hora" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TIME_OPTIONS.map((t) => (
+                              <SelectItem key={t} value={t}>{t}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Límites y descuentos */}
+                    <div className="space-y-2">
+                      <Label htmlFor="limite_por_usuario">Límite por usuario</Label>
+                      <Input
+                        id="limite_por_usuario"
+                        type="number"
+                        min={0}
+                        value={limitePorUsuario}
+                        onChange={(e) => setLimitePorUsuario(e.target.value === "" ? "" : Number(e.target.value))}
+                        placeholder="Ej. 10"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="limite_total">Límite total</Label>
+                      <Input
+                        id="limite_total"
+                        type="number"
+                        min={0}
+                        value={limiteTotal}
+                        onChange={(e) => setLimiteTotal(e.target.value === "" ? "" : Number(e.target.value))}
+                        placeholder="Ej. 100"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="porcentaje">Porcentaje</Label>
+                      <Input
+                        id="porcentaje"
+                        type="number"
+                        step="0.01"
+                        value={porcentaje}
+                        onChange={(e) => onChangePorcentaje(e.target.value)}
+                        placeholder="0.00"
+                        disabled={disablePorcentaje}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="precio">Precio</Label>
+                      <Input
+                        id="precio"
+                        type="number"
+                        step="0.00001"
+                        value={precio}
+                        onChange={(e) => onChangePrecio(e.target.value)}
+                        placeholder="100.00000"
+                        disabled={disablePrecio}
+                      />
+                    </div>
+
+                    {/* Imagen */}
+                    <div className="md:col-span-2 space-y-2">
+                      <Label htmlFor="imagen" className="flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4" /> Imagen de la promoción (JPG/PNG/WEBP, máx 5MB)
+                      </Label>
+                      <Input
+                        key={fileKey}  
+                        id="imagen"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={onSelectImagen}
+                      />
+                      {imagenPreview ? (
+                        <div className="mt-2 w-full rounded-xl border border-white/15 bg-white/5 p-2">
+                          {/* Usa <img> para blobs y limita altura; no estira el modal */}
+                          <img
+                            src={imagenPreview}
+                            alt="Vista previa de la promoción"
+                            className="w-full max-h-64 md:max-h-72 object-contain rounded-lg"
+                          />
+                          <p className="mt-2 text-xs text-white/60">
+                            La imagen se ajusta a la vista. Se guardará con su tamaño original.
+                          </p>
+                        </div>
+                      ) : null}
+
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Fecha fin</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button type="button" variant="outline" className="w-full justify-start gap-2 bg-white/10 border-white/30 text-white hover:bg-white/15">
-                          <CalendarIcon className="h-4 w-4" />
-                          {fechaFinDate
-                            ? fechaFinDate.toLocaleDateString("es-MX")
-                            : "Selecciona fecha"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="p-0">
-                        <Calendar
-                          mode="single"
-                          selected={fechaFinDate ?? undefined}
-                          onSelect={(d) => setFechaFinDate(d ?? null)}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-
-                    <div className="space-y-1">
-                      <Label className="text-xs">Hora fin</Label>
-                      <Select value={horaFin} onValueChange={setHoraFin}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Selecciona hora" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {TIME_OPTIONS.map((t) => (
-                            <SelectItem key={t} value={t}>{t}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* Limits and pricing */}
-                  <div className="space-y-2">
-                    <Label htmlFor="limite_por_usuario">Límite por usuario</Label>
-                    <Input
-                      id="limite_por_usuario"
-                      type="number"
-                      min={0}
-                      value={limitePorUsuario}
-                      onChange={(e) => setLimitePorUsuario(e.target.value === "" ? "" : Number(e.target.value))}
-                      placeholder="Ej. 10"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="limite_total">Límite total</Label>
-                    <Input
-                      id="limite_total"
-                      type="number"
-                      min={0}
-                      value={limiteTotal}
-                      onChange={(e) => setLimiteTotal(e.target.value === "" ? "" : Number(e.target.value))}
-                      placeholder="Ej. 100"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="porcentaje">Porcentaje</Label>
-                    <Input
-                      id="porcentaje"
-                      type="number"
-                      step="0.01"
-                      value={porcentaje}
-                      onChange={(e) => onChangePorcentaje(e.target.value)}
-                      placeholder="0.00"
-                      disabled={disablePorcentaje}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="precio">Precio</Label>
-                    <Input
-                      id="precio"
-                      type="number"
-                      step="0.00001"
-                      value={precio}
-                      onChange={(e) => onChangePrecio(e.target.value)}
-                      placeholder="100.00000"
-                      disabled={disablePrecio}
-                    />
-                  </div>
-                </div>
-
-                <DialogFooter className="gap-2">
-                  <Button type="button" variant="secondary" onClick={() => setOpenCreate(false)}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" disabled={creating} className="btn-gradient btn-apple text-white">
-                    {creating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                    Crear promoción
-                  </Button>
-                </DialogFooter>
-              </form>
+                  <DialogFooter className="gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => { resetForm(); setOpenCreate(false); }}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button type="submit" disabled={creating} className="btn-gradient btn-apple text-white">
+                      {creating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                      Crear promoción
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </div>
             </DialogContent>
           </Dialog>
         </div>
@@ -484,91 +578,119 @@ export function ColaboradorPromociones({
               const fin = formatDateMX(p.fecha_fin);
               const isBusy = busyId === p.id || deletingId === p.id;
 
+              // Campo probable para URL de imagen devuelta por tu API:
+              // ajusta según tu DTO real: p.imagen_url || p.imagen || p.banner
+              const imgUrl = (p as any).imagen_url || (p as any).imagen || null;
+
               return (
-                <Card key={p.id} className="glass border border-white/15 hover:shadow-lg transition-shadow">
-                  <CardHeader className="flex flex-row items-start justify-between space-y-0">
-                    <div className="space-y-1">
-                      <CardTitle className="text-base text-white">{p.nombre}</CardTitle>
-                      <Badge variant={p.activo ? "default" : "secondary"} className={p.activo ? "bg-white/20 text-white" : "bg-white/10 text-white/80"}>
-                        {p.activo ? "Activo" : "Inactivo"}
-                      </Badge>
-                    </div>
+                <Card
+                  key={p.id}
+                  className="glass border border-white/15 hover:shadow-lg transition-shadow overflow-hidden"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-[120px,1fr] gap-4">
+                    {/* Columna imagen */}
+                    {imgUrl ? (
+                      <div className="relative w-full h-40 md:h-auto md:min-h-[120px]">
+                        <Image
+                          src={imgUrl}
+                          alt={p.nombre}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 768px) 100vw, 120px"
+                          priority={false}
+                        />
+                      </div>
+                    ) : (
+                      // Placeholder si no hay imagen
+                      <div className="hidden md:block w-full h-full min-h-[120px] bg-white/5" />
+                    )}
 
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground select-none">Estatus</span>
-                      <Switch
-                        checked={p.activo}
-                        onCheckedChange={() => handleToggleActivo(p.id)}
-                        disabled={isBusy}
-                        aria-label={`Cambiar estatus de ${p.nombre}`}
-                      />
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="hover:bg-red-50"
-                            aria-label={`Borrar promoción ${p.nombre}`}
-                            title="Borrar promoción"
-                            disabled={isBusy}
+                    {/* Columna contenido */}
+                    <div className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <CardTitle className="text-base text-white">{p.nombre}</CardTitle>
+                          <Badge
+                            variant={p.activo ? "default" : "secondary"}
+                            className={p.activo ? "bg-white/20 text-white" : "bg-white/10 text-white/80"}
                           >
-                            {deletingId === p.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-4 w-4 text-red-600" />
-                            )}
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="glass-alt">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle className="text-white/70">
-                              ¿Borrar “{p.nombre}”?
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Esta acción no se puede deshacer. Se eliminará la promoción de forma permanente.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                              className="bg-red-600 hover:bg-red-700"
-                              onClick={() => handleDelete(p.id)}
-                            >
-                              Borrar
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </CardHeader>
+                            {p.activo ? "Activo" : "Inactivo"}
+                          </Badge>
+                        </div>
 
-                  <CardContent className="space-y-3">
-                    {p.descripcion ? (
-                      <p className="text-sm text-white/70 line-clamp-3">
-                        {p.descripcion}
-                      </p>
-                    ) : null}
-
-                    <div className="grid grid-cols-2 gap-3 text-xs">
-                      <div>
-                        <div className="text-white/70">Inicio</div>
-                        <div className="font-medium text-white/70">{inicio}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-white/60 select-none">Estatus</span>
+                          <Switch
+                            checked={p.activo}
+                            onCheckedChange={() => handleToggleActivo(p.id)}
+                            disabled={isBusy}
+                            aria-label={`Cambiar estatus de ${p.nombre}`}
+                          />
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="hover:bg-red-50/10"
+                                aria-label={`Borrar promoción ${p.nombre}`}
+                                title="Borrar promoción"
+                                disabled={isBusy}
+                              >
+                                {deletingId === p.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                )}
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="glass-alt">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle className="text-white/80">
+                                  ¿Borrar “{p.nombre}”?
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Esta acción no se puede deshacer. Se eliminará la promoción de forma permanente.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  className="bg-red-600 hover:bg-red-700"
+                                  onClick={() => handleDelete(p.id)}
+                                >
+                                  Borrar
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </div>
-                      <div>
-                        <div className="text-white/70">Fin</div>
-                        <div className="font-medium text-white/70">{fin}</div>
+
+                      {p.descripcion ? (
+                        <p className="mt-2 text-sm text-white/70 line-clamp-3">{p.descripcion}</p>
+                      ) : null}
+
+                      <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <div className="text-white/70">Inicio</div>
+                          <div className="font-medium text-white/70">{inicio}</div>
+                        </div>
+                        <div>
+                          <div className="text-white/70">Fin</div>
+                          <div className="font-medium text-white/70">{fin}</div>
+                        </div>
+                      </div>
+
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <PorcentajeBadge tipo={p.tipo} porcentaje={p.porcentaje} />
+                        <PrecioBadge precio={p.precio} />
+                        <Badge variant="outline" className="gap-1 text-white/70">
+                          <Gift className="w-3 h-3 text-white/70" />
+                          {p.numero_canjeados} canjes
+                        </Badge>
                       </div>
                     </div>
-
-                    <div className="flex flex-wrap items-center gap-2 pt-1">
-                      <PorcentajeBadge tipo={p.tipo} porcentaje={p.porcentaje} />
-                      <PrecioBadge precio={p.precio} />
-                      <Badge variant="outline" className="gap-1 text-white/70">
-                        <Gift className="w-3 h-3 text-white/70" />
-                        {p.numero_canjeados} canjes
-                      </Badge>
-                    </div>
-                  </CardContent>
+                  </div>
                 </Card>
               );
             })}

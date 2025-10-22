@@ -1,18 +1,28 @@
+// actions/colaboradores/create-promocion.ts
 'use server'
 
-import axios from "axios"
+import axios from 'axios'
 import { withAuthRetry } from '@/lib/login/auth-wrapper'
 
-const apiHost = process.env.API_HOST;
+const apiHost = process.env.API_HOST
 
-export async function createPromocion(payload: any) {
-  console.log("Creando promoción");
-  console.log(payload)
+// Acepta FormData (con archivo) o JSON plano (sin archivo)
+export async function createPromocion(payload: FormData | Record<string, any>) {
+  const isFormData = typeof FormData !== 'undefined' && payload instanceof FormData
+
   const result = await withAuthRetry((token) =>
-    axios.post(`${apiHost}/functionality/promociones/create/`, payload, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-  );
+    axios.post(
+      `${apiHost}/functionality/promociones/create/`,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          // Importante: NO fijar Content-Type si es FormData para que axios/browsers pongan el boundary
+          ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+        },
+      }
+    )
+  )
 
-  return result && !(result as any).error; // Return true if no error, false otherwise
+  return result && !(result as any).error
 }

@@ -16,6 +16,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogOverlay,
   DialogTitle,
   DialogTrigger,
 } from "./ui/dialog";
@@ -202,7 +203,7 @@ export function ColaboradorCajero({ colaboradorName, idNegocio }: Props) {
                   Nuevo cajero
                 </Button>
               </DialogTrigger>
-
+              <DialogOverlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"/>
               <DialogContent className="max-w-2xl glass-alt border border-white/20 text-white">
                 <DialogHeader>
                   <DialogTitle>Crear cajero</DialogTitle>
