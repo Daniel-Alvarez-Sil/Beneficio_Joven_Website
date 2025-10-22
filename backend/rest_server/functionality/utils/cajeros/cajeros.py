@@ -59,7 +59,7 @@ class validarQRView(APIView):
             codigo_canje = Canje(
                 id_promocion=promocion,
                 id_usuario=codigo_qr.id_usuario,
-                id_cajero=canjeador.id,
+                id_cajero_id=canjeador.id,
                 fecha_creado=timezone.now()
             )
             print("Código QR validado correctamente")
