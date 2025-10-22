@@ -1,22 +1,24 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createColaborador } from "@/actions/register/create-colaborador"; // <-- your file that contains the provided 'use server' function
+// app/api/create-colaborador/route.ts
+import { NextResponse } from 'next/server';
+import { registrarSolicitud } from '@/actions/colaboradores/registro_solicitud';
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
-    // Grab multipart/form-data from the client
     const formData = await req.formData();
+    const resp = await registrarSolicitud(formData);
 
-    // Forward the FormData to your server-side axios call
-    // Note: The provided createColaborador expects a FormData-like object.
-    console.log(formData)
-    const ok = await createColaborador(formData);
-
-    if (!ok) {
-      return NextResponse.json({ ok: false, message: "Fallo al crear colaborador" }, { status: 400 });
+    if (!resp.ok) {
+      return NextResponse.json(
+        { ok: false, message: resp.error || `Backend ${resp.status}` },
+        { status: resp.status || 400 }
+      );
     }
-    return NextResponse.json({ ok: true });
+
+    return NextResponse.json({ ok: true, data: resp.data });
   } catch (err: any) {
-    const msg = err?.response?.data?.detail || err?.message || "Error inesperado";
-    return NextResponse.json({ ok: false, message: msg }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, message: err?.message ?? 'Error inesperado' },
+      { status: 500 }
+    );
   }
 }
