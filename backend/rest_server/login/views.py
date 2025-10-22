@@ -47,7 +47,13 @@ class LoginView(APIView):
         if response.status_code == 200:
             # Return the response and the user's role
             tipo = usuario.tipo
+            
             response_data = response.json()
+            response_data['tipo_web'] = tipo
+
+            if tipo == 'cajero':
+                tipo = 'administrador'
+
             response_data['tipo'] = tipo
             return Response(response_data, status=status.HTTP_200_OK)
         else:
