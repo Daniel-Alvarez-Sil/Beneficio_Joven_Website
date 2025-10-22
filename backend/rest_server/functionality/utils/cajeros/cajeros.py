@@ -56,7 +56,7 @@ class validarQRView(APIView):
             promocion.save()
             
             # Crear el registro de canje
-            codigo_canje = Canje(
+            codigo_canje = Canje.objects.create(
                 id_promocion=promocion,
                 id_usuario=codigo_qr.id_usuario,
                 id_cajero_id=canjeador.id,
