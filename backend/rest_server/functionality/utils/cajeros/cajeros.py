@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from ...models import CodigoQR, Promocion, AdministradorNegocio, Canje 
+from ...models import CodigoQR, Promocion, Canje, Cajero 
 from login.models import User
 from django.db.models import Q
 from django.utils import timezone
@@ -16,10 +16,14 @@ class validarQRView(APIView):
         if not username:
             return Response({"detail": "Usuario no autenticado."}, status=status.HTTP_401_UNAUTHORIZED)
         # Cambiar por cajero
-        administradorNegocio = AdministradorNegocio.objects.get(Q(usuario=username) | Q(correo=username)) 
-        if not administradorNegocio:
+        try: 
+            canjeador = canjeador.objects.get(Q(usuario=username) | Q(correo=username))   
+        except canjeador.DoesNotExist:
+            canjeador = Cajero.objects.get(Q(usuario=username) | Q(correo=username))
+            
+        if not canjeador:
             return Response({"detail": "No se encontró el administrador de negocio."}, status=status.HTTP_404_NOT_FOUND)
-        id_negocio = administradorNegocio.id_negocio if administradorNegocio else None
+        id_negocio = canjeador.id_negocio if canjeador else None
         if not id_negocio:
             return Response({"detail": "El administrador no tiene un negocio asociado."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -55,7 +59,7 @@ class validarQRView(APIView):
             codigo_canje = Canje(
                 id_promocion=promocion,
                 id_usuario=codigo_qr.id_usuario,
-                id_cajero=administradorNegocio.id,
+                id_cajero=canjeador.id,
                 fecha_creado=timezone.now()
             )
             print("Código QR validado correctamente")
