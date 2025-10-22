@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from ...models import CodigoQR, Promocion, Canje, Cajero 
+from ...models import CodigoQR, Promocion, AdministradorNegocio, Canje, Cajero 
 from login.models import User
 from django.db.models import Q
 from django.utils import timezone
@@ -17,8 +17,8 @@ class validarQRView(APIView):
             return Response({"detail": "Usuario no autenticado."}, status=status.HTTP_401_UNAUTHORIZED)
         # Cambiar por cajero
         try: 
-            canjeador = canjeador.objects.get(Q(usuario=username) | Q(correo=username))   
-        except canjeador.DoesNotExist:
+            canjeador = AdministradorNegocio.objects.get(Q(usuario=username) | Q(correo=username))   
+        except AdministradorNegocio.DoesNotExist:
             canjeador = Cajero.objects.get(Q(usuario=username) | Q(correo=username))
             
         if not canjeador:
