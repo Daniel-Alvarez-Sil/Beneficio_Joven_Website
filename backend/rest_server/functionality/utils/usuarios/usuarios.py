@@ -14,7 +14,8 @@ class CodigoQRView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        id_usuario = request.data.get('id_usuario')
+        id_usuario = request.user.id
+        # id_usuario = request.data.get('id_usuario')
         id_promocion = request.data.get('id_promocion')
         codigo_qr = CodigoQR.objects.create(
             id_usuario_id=id_usuario,
