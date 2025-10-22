@@ -5,9 +5,10 @@ export interface AdminInput {
   nombre: string;
   apellido_paterno: string;
   apellido_materno: string;
-  usuario: string;
   contrasena: string;
 }
+
+export type EstatusNegocio = 'En revision' | 'En Revision' | 'Aprobado' | 'Rechazado';
 
 export interface NegocioInput {
   correo: string;
@@ -15,14 +16,15 @@ export interface NegocioInput {
   nombre: string;
   rfc: string;
   sitio_web?: string;
-  estatus: "En Revision" | "En revision" | "Aprobado" | "Rechazado";
+  maps_url?: string;
+  estatus: EstatusNegocio;
   cp: string;
   numero_ext: string;
   numero_int?: string;
   colonia: string;
   municipio: string;
   estado: string;
-  logo?: string; // base64 o url
+  file?: string; // base64 o url
 }
 
 export interface RegistroPayload {

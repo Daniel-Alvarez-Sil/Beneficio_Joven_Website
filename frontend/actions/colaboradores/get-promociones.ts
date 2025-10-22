@@ -16,6 +16,7 @@ export type Promocion = {
   precio: string;     // "85.00000"
   activo: boolean;
   numero_canjeados: number;
+  imagen?: string | null;
 };
 
 /**

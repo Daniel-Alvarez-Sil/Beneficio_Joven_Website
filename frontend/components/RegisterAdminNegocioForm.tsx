@@ -19,11 +19,9 @@ export function RegisterAdminNegocioForm() {
     nombre: '',
     apellido_paterno: '',
     apellido_materno: '',
-    usuario: '',
     contrasena: '',
   });
 
-  // Carga borrador
   useEffect(() => {
     const raw = localStorage.getItem(LS_ADMIN_KEY);
     if (raw) {
@@ -31,7 +29,6 @@ export function RegisterAdminNegocioForm() {
     }
   }, []);
 
-  // Autosave
   useEffect(() => {
     localStorage.setItem(LS_ADMIN_KEY, JSON.stringify(form));
   }, [form]);
@@ -39,32 +36,27 @@ export function RegisterAdminNegocioForm() {
   const onChange = (k: keyof AdminInput, v: string) =>
     setForm(prev => ({ ...prev, [k]: v }));
 
-  // Bloquea Enter para que NO ocurra ninguna acción accidental
   const blockEnter: React.KeyboardEventHandler = (e) => {
     if (e.key === 'Enter') e.preventDefault();
   };
 
-  const goToStep2 = () => {
-    // Sólo navegación al paso 2 (sin POST aquí)
-    router.push('/registro/negocio');
-  };
+  const goToStep2 = () => router.push('/registro/negocio');
 
   return (
     <AuthLayout title="REGISTRO (Paso 1)" subtitle="Administrador del negocio">
-      {/* Importante: sin <form> para evitar submit accidental */}
       <div className="space-y-4" onKeyDown={blockEnter}>
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-2 text-white">
             <Label htmlFor="nombre">Nombre</Label>
-            <Input id="nombre" value={form.nombre} onChange={(e) => onChange('nombre', e.target.value)} required className="input-apple text-white placeholder-white/50 caret-white text-white placeholder-white/50 caret-white" />
+            <Input id="nombre" value={form.nombre} onChange={(e) => onChange('nombre', e.target.value)} required className="input-apple text-white placeholder-white/50 caret-white" />
           </div>
           <div className="space-y-2 text-white">
             <Label htmlFor="apellido_paterno">Apellido paterno</Label>
-            <Input id="apellido_paterno" value={form.apellido_paterno} onChange={(e) => onChange('apellido_paterno', e.target.value)} required className="input-apple text-white placeholder-white/50 caret-white text-white placeholder-white/50 caret-white" />
+            <Input id="apellido_paterno" value={form.apellido_paterno} onChange={(e) => onChange('apellido_paterno', e.target.value)} required className="input-apple text-white placeholder-white/50 caret-white" />
           </div>
           <div className="space-y-2 text-white">
             <Label htmlFor="apellido_materno">Apellido materno</Label>
-            <Input id="apellido_materno" value={form.apellido_materno} onChange={(e) => onChange('apellido_materno', e.target.value)} required className="input-apple text-white placeholder-white/50 caret-white text-white placeholder-white/50 caret-white" />
+            <Input id="apellido_materno" value={form.apellido_materno} onChange={(e) => onChange('apellido_materno', e.target.value)} required className="input-apple text-white placeholder-white/50 caret-white" />
           </div>
           <div className="space-y-2 text-white">
             <Label htmlFor="telefono">Teléfono</Label>
@@ -77,15 +69,9 @@ export function RegisterAdminNegocioForm() {
           <Input id="correo" type="email" value={form.correo} onChange={(e) => onChange('correo', e.target.value)} required className="input-apple text-white placeholder-white/50 caret-white" />
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4 text-white">
-          <div className="space-y-2">
-            <Label htmlFor="usuario">Usuario</Label>
-            <Input id="usuario" value={form.usuario} onChange={(e) => onChange('usuario', e.target.value)} required className="input-apple text-white placeholder-white/50 caret-white" autoComplete="username" />
-          </div>
-          <div className="space-y-2 text-white">
-            <Label htmlFor="contrasena">Contraseña</Label>
-            <Input id="contrasena" type="password" value={form.contrasena} onChange={(e) => onChange('contrasena', e.target.value)} required className="input-apple text-white placeholder-white/50 caret-white" autoComplete="new-password" />
-          </div>
+        <div className="space-y-2 text-white">
+          <Label htmlFor="contrasena">Contraseña</Label>
+          <Input id="contrasena" type="password" value={form.contrasena} onChange={(e) => onChange('contrasena', e.target.value)} required className="input-apple text-white placeholder-white/50 caret-white" autoComplete="new-password" />
         </div>
 
         <Button type="button" onClick={goToStep2} className="w-full btn-gradient btn-apple text-white">
