@@ -16,7 +16,7 @@ class CodigoQRView(APIView):
     def post(self, request):
         username = request.user.username
         # id_usuario = request.data.get('id_usuario')
-        id_usuario = Usuario.objects.get(Q(username=username) | Q(correo=username)).id
+        id_usuario = Usuario.objects.get(correo=username).id
 
 
         id_promocion = request.data.get('id_promocion')
