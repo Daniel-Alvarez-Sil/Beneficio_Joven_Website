@@ -40,11 +40,20 @@ import {
   SelectValue,
 } from "./ui/select";
 
-import Image from "next/image";
-import { Calendar as CalendarIcon, Gift, Loader2, Plus, Trash2, Image as ImageIcon } from "lucide-react";
+import {
+  Calendar as CalendarIcon,
+  Gift,
+  Loader2,
+  Plus,
+  Trash2,
+  Image as ImageIcon,
+} from "lucide-react";
 
 import { logout } from "@/actions/login/auth";
-import { getPromociones, type Promocion } from "@/actions/colaboradores/get-promociones";
+import {
+  getPromociones,
+  type Promocion,
+} from "@/actions/colaboradores/get-promociones";
 import { cambiarEstatusPromocion } from "@/actions/colaboradores/update-estatus-promocion";
 import { deletePromocion } from "@/actions/colaboradores/delete-promocion";
 import { createPromocion } from "@/actions/colaboradores/create-promocion";
@@ -73,7 +82,13 @@ function PrecioBadge({ precio }: { precio: string }) {
   return <Badge variant="secondary">${v.toFixed(2)} off</Badge>;
 }
 
-function PorcentajeBadge({ tipo, porcentaje }: { tipo: string | null; porcentaje: string }) {
+function PorcentajeBadge({
+  tipo,
+  porcentaje,
+}: {
+  tipo: string | null;
+  porcentaje: string;
+}) {
   if (tipo !== "porcentaje") return null;
   const v = Number(porcentaje);
   if (!isFinite(v) || v <= 0) return null;
@@ -115,8 +130,8 @@ export function ColaboradorPromociones({
 
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
-  const [limitePorUsuario, setLimitePorUsuario] = useState<number | ''>('');
-  const [limiteTotal, setLimiteTotal] = useState<number | ''>('');
+  const [limitePorUsuario, setLimitePorUsuario] = useState<number | "">("");
+  const [limiteTotal, setLimiteTotal] = useState<number | "">("");
   const [porcentaje, setPorcentaje] = useState<string>("0.00");
   const [precio, setPrecio] = useState<string>("0.00000");
   const [activo, setActivo] = useState<boolean>(true);
@@ -151,23 +166,28 @@ export function ColaboradorPromociones({
         if (mounted) setLoading(false);
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [idNegocio]);
 
   useEffect(() => {
-  return () => {
-    if (imagenPreview) URL.revokeObjectURL(imagenPreview);
+    return () => {
+      if (imagenPreview) URL.revokeObjectURL(imagenPreview);
     };
   }, [imagenPreview]);
-
 
   const handleToggleActivo = async (id: number) => {
     setError(null);
     setBusyId(id);
-    setPromos((prev) => prev.map((p) => (p.id === id ? { ...p, activo: !p.activo } : p)));
+    setPromos((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, activo: !p.activo } : p))
+    );
     const ok = await cambiarEstatusPromocion(id);
     if (!ok) {
-      setPromos((prev) => prev.map((p) => (p.id === id ? { ...p, activo: !p.activo } : p)));
+      setPromos((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, activo: !p.activo } : p))
+      );
       setError("No se pudo cambiar el estatus. Intenta de nuevo.");
     }
     setBusyId(null);
@@ -210,7 +230,7 @@ export function ColaboradorPromociones({
       return;
     }
 
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const validTypes = ["image/jpeg", "image/png", "image/webp"];
     const maxMB = 5;
     if (!validTypes.includes(file.type)) {
       setError("La imagen debe ser JPG, PNG o WEBP.");
@@ -232,8 +252,8 @@ export function ColaboradorPromociones({
   const resetForm = () => {
     setNombre("");
     setDescripcion("");
-    setLimitePorUsuario('');
-    setLimiteTotal('');
+    setLimitePorUsuario("");
+    setLimiteTotal("");
     setPorcentaje("0.00");
     setPrecio("0.00000");
     setActivo(true);
@@ -246,6 +266,7 @@ export function ColaboradorPromociones({
     setImagenPreview(null);
     setImagenFile(null);
 
+    // fuerza remount del <input type="file">
     setFileKey((k) => k + 1);
   };
 
@@ -285,10 +306,8 @@ export function ColaboradorPromociones({
     fd.append("porcentaje", String(Number(pct.toFixed(2))));
     fd.append("precio", String(Number(prc.toFixed(5))));
     fd.append("activo", String(activo ? 1 : 0));
-
-    // Si tu API espera un campo específico para el archivo, usa ese nombre (p.ej. "imagen")
     if (imagenFile) {
-      fd.append("imagen", imagenFile); // <-- nombre del campo de archivo en tu backend
+      fd.append("file", imagenFile);
     }
 
     setCreating(true);
@@ -318,16 +337,20 @@ export function ColaboradorPromociones({
           <h2 className="text-lg font-medium">Promociones</h2>
 
           {/* Create button + dialog */}
-          <Dialog open={openCreate} onOpenChange={(v)=>{ 
-            if (!v) resetForm();
-            setOpenCreate(v); }}>
+          <Dialog
+            open={openCreate}
+            onOpenChange={(v) => {
+              if (!v) resetForm();
+              setOpenCreate(v);
+            }}
+          >
             <DialogTrigger asChild>
               <Button className="gap-2 btn-gradient btn-apple text-white">
                 <Plus className="h-4 w-4" />
                 Nueva promoción
               </Button>
             </DialogTrigger>
-            <DialogOverlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"/>
+            <DialogOverlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
             <DialogContent className="max-w-2xl glass-alt border border-white/20 text-white max-h-[85vh] overflow-y-auto">
               <div className="p-6">
                 <DialogHeader>
@@ -365,7 +388,9 @@ export function ColaboradorPromociones({
                           checked={activo}
                           onCheckedChange={setActivo}
                         />
-                        <span className="text-sm">{activo ? "Activo" : "Inactivo"}</span>
+                        <span className="text-sm">
+                          {activo ? "Activo" : "Inactivo"}
+                        </span>
                       </div>
                     </div>
 
@@ -386,7 +411,11 @@ export function ColaboradorPromociones({
                       <Label>Fecha inicio</Label>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button type="button" variant="outline" className="w-full justify-start gap-2 bg-white/10 border-white/30 text-white hover:bg-white/15">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full justify-start gap-2 bg-white/10 border-white/30 text-white hover:bg-white/15"
+                          >
                             <CalendarIcon className="h-4 w-4" />
                             {fechaInicioDate
                               ? fechaInicioDate.toLocaleDateString("es-MX")
@@ -411,7 +440,9 @@ export function ColaboradorPromociones({
                           </SelectTrigger>
                           <SelectContent>
                             {TIME_OPTIONS.map((t) => (
-                              <SelectItem key={t} value={t}>{t}</SelectItem>
+                              <SelectItem key={t} value={t}>
+                                {t}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -422,7 +453,11 @@ export function ColaboradorPromociones({
                       <Label>Fecha fin</Label>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button type="button" variant="outline" className="w-full justify-start gap-2 bg-white/10 border-white/30 text-white hover:bg-white/15">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full justify-start gap-2 bg-white/10 border-white/30 text-white hover:bg-white/15"
+                          >
                             <CalendarIcon className="h-4 w-4" />
                             {fechaFinDate
                               ? fechaFinDate.toLocaleDateString("es-MX")
@@ -447,7 +482,9 @@ export function ColaboradorPromociones({
                           </SelectTrigger>
                           <SelectContent>
                             {TIME_OPTIONS.map((t) => (
-                              <SelectItem key={t} value={t}>{t}</SelectItem>
+                              <SelectItem key={t} value={t}>
+                                {t}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -462,7 +499,11 @@ export function ColaboradorPromociones({
                         type="number"
                         min={0}
                         value={limitePorUsuario}
-                        onChange={(e) => setLimitePorUsuario(e.target.value === "" ? "" : Number(e.target.value))}
+                        onChange={(e) =>
+                          setLimitePorUsuario(
+                            e.target.value === "" ? "" : Number(e.target.value)
+                          )
+                        }
                         placeholder="Ej. 10"
                       />
                     </div>
@@ -474,7 +515,11 @@ export function ColaboradorPromociones({
                         type="number"
                         min={0}
                         value={limiteTotal}
-                        onChange={(e) => setLimiteTotal(e.target.value === "" ? "" : Number(e.target.value))}
+                        onChange={(e) =>
+                          setLimiteTotal(
+                            e.target.value === "" ? "" : Number(e.target.value)
+                          )
+                        }
                         placeholder="Ej. 100"
                       />
                     </div>
@@ -511,7 +556,7 @@ export function ColaboradorPromociones({
                         <ImageIcon className="w-4 h-4" /> Imagen de la promoción (JPG/PNG/WEBP, máx 5MB)
                       </Label>
                       <Input
-                        key={fileKey}  
+                        key={fileKey}
                         id="imagen"
                         type="file"
                         accept="image/jpeg,image/png,image/webp"
@@ -519,7 +564,6 @@ export function ColaboradorPromociones({
                       />
                       {imagenPreview ? (
                         <div className="mt-2 w-full rounded-xl border border-white/15 bg-white/5 p-2">
-                          {/* Usa <img> para blobs y limita altura; no estira el modal */}
                           <img
                             src={imagenPreview}
                             alt="Vista previa de la promoción"
@@ -530,7 +574,6 @@ export function ColaboradorPromociones({
                           </p>
                         </div>
                       ) : null}
-
                     </div>
                   </div>
 
@@ -538,12 +581,21 @@ export function ColaboradorPromociones({
                     <Button
                       type="button"
                       variant="secondary"
-                      onClick={() => { resetForm(); setOpenCreate(false); }}
+                      onClick={() => {
+                        resetForm();
+                        setOpenCreate(false);
+                      }}
                     >
                       Cancelar
                     </Button>
-                    <Button type="submit" disabled={creating} className="btn-gradient btn-apple text-white">
-                      {creating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                    <Button
+                      type="submit"
+                      disabled={creating}
+                      className="btn-gradient btn-apple text-white"
+                    >
+                      {creating ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : null}
                       Crear promoción
                     </Button>
                   </DialogFooter>
@@ -578,9 +630,8 @@ export function ColaboradorPromociones({
               const fin = formatDateMX(p.fecha_fin);
               const isBusy = busyId === p.id || deletingId === p.id;
 
-              // Campo probable para URL de imagen devuelta por tu API:
-              // ajusta según tu DTO real: p.imagen_url || p.imagen || p.banner
-              const imgUrl = (p as any).imagen_url || (p as any).imagen || null;
+              // ✅ usa directamente p.imagen con un fallback seguro
+              const imgUrl = p.imagen && p.imagen.trim() !== "" ? p.imagen : null;
 
               return (
                 <Card
@@ -590,36 +641,43 @@ export function ColaboradorPromociones({
                   <div className="grid grid-cols-1 md:grid-cols-[120px,1fr] gap-4">
                     {/* Columna imagen */}
                     {imgUrl ? (
-                      <div className="relative w-full h-40 md:h-auto md:min-h-[120px]">
-                        <Image
+                      <div className="relative w-full h-40 md:h-[120px]">
+                        <img
                           src={imgUrl}
                           alt={p.nombre}
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 768px) 100vw, 120px"
-                          priority={false}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                          referrerPolicy="no-referrer"     // opcional: evita bloqueos por referrer en S3
                         />
                       </div>
                     ) : (
-                      // Placeholder si no hay imagen
-                      <div className="hidden md:block w-full h-full min-h-[120px] bg-white/5" />
+                      // placeholder cuando no hay imagen
+                      <div className="hidden md:block w-full h-[120px] bg-white/5" />
                     )}
 
                     {/* Columna contenido */}
                     <div className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
-                          <CardTitle className="text-base text-white">{p.nombre}</CardTitle>
+                          <CardTitle className="text-base text-white">
+                            {p.nombre}
+                          </CardTitle>
                           <Badge
                             variant={p.activo ? "default" : "secondary"}
-                            className={p.activo ? "bg-white/20 text-white" : "bg-white/10 text-white/80"}
+                            className={
+                              p.activo
+                                ? "bg-white/20 text-white"
+                                : "bg-white/10 text-white/80"
+                            }
                           >
                             {p.activo ? "Activo" : "Inactivo"}
                           </Badge>
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-white/60 select-none">Estatus</span>
+                          <span className="text-xs text-white/60 select-none">
+                            Estatus
+                          </span>
                           <Switch
                             checked={p.activo}
                             onCheckedChange={() => handleToggleActivo(p.id)}
@@ -667,7 +725,9 @@ export function ColaboradorPromociones({
                       </div>
 
                       {p.descripcion ? (
-                        <p className="mt-2 text-sm text-white/70 line-clamp-3">{p.descripcion}</p>
+                        <p className="mt-2 text-sm text-white/70 line-clamp-3">
+                          {p.descripcion}
+                        </p>
                       ) : null}
 
                       <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
