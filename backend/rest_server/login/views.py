@@ -52,7 +52,7 @@ class LoginView(APIView):
             response_data['tipo_web'] = tipo
 
             if tipo == 'cajero':
-                tipo = 'administrador'
+                tipo = 'colaborador'
 
             response_data['tipo'] = tipo
             return Response(response_data, status=status.HTTP_200_OK)
