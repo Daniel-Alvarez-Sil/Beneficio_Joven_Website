@@ -36,6 +36,8 @@ class AdministradorNegocioInputSerializer(serializers.ModelSerializer):
 class AltaNegocioYAdminSerializer(serializers.Serializer):
     negocio = NegocioCreateSerializer()
     administrador = AdministradorNegocioInputSerializer()
+    usuario = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    creado_por_admin = serializers.BooleanField(required=False, default=False, allow_null=True)
 
     def validate(self, attrs):
         User = get_user_model()
@@ -77,13 +79,14 @@ class AltaNegocioYAdminSerializer(serializers.Serializer):
             estatus="PENDIENTE"
         )
 
-        User.objects.create_user(
-            username=admin_data["correo"],
-            password=admin_data["contrasena"],
-            tipo="administrador"
-        )
-
-
+        # Hasta que se acepte su solicitud, el administrador no puede loguearse
+        # A menos que haya sido creado por un admin
+        if validated_data.get("creado_por_admin", True):
+            User.objects.create_user(
+                username=admin_data["correo"],
+                password=admin_data["contrasena"],
+                tipo="colaborador"
+            )
 
         # Devolvemos los tres para serializar una respuesta útil
         return {"negocio": negocio, "administrador": admin}

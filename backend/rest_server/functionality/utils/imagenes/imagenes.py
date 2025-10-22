@@ -143,20 +143,22 @@ class UploadNegocioWithFileView(APIView):
 
     def post(self, request, *args, **kwargs):
         f = request.FILES.get("file")
+        # creado = request.data.get("creado_por_admin")
         if f: 
             key = upload_file_to_s3(f, 'logos_negocios/')
             print("Returning response with URLs.")
         serializer = AltaNegocioYAdminSerializer(
-            data=request.data, context={"request": request, "logo_key": _s3_https_url(
-                getattr(settings, "AWS_STORAGE_BUCKET_NAME", None) or os.environ.get("S3_BUCKET_NAME"),
-                getattr(settings, "AWS_S3_REGION_NAME", None)
-                or getattr(settings, "AWS_REGION", None)
-                or os.environ.get("AWS_REGION")
-                or "us-east-1",
-                key,
-                custom_domain=getattr(settings, "AWS_S3_CUSTOM_DOMAIN", None)
-                or os.environ.get("AWS_S3_CUSTOM_DOMAIN"),
-            )}
+            # data=request.data, context={"request": request, "logo_key": _s3_https_url(
+            #     getattr(settings, "AWS_STORAGE_BUCKET_NAME", None) or os.environ.get("S3_BUCKET_NAME"),
+            #     getattr(settings, "AWS_S3_REGION_NAME", None)
+            #     or getattr(settings, "AWS_REGION", None)
+            #     or os.environ.get("AWS_REGION")
+            #     or "us-east-1",
+            #     key if f else None,
+            #     custom_domain=getattr(settings, "AWS_S3_CUSTOM_DOMAIN", None)
+            #     or os.environ.get("AWS_S3_CUSTOM_DOMAIN"),
+            # )}
+            data=request.data, context={"request": request, "logo_key": key if f else None}
         )
         serializer.is_valid(raise_exception=True)
         result = serializer.save()

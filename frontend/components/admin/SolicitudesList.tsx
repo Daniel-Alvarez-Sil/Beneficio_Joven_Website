@@ -18,7 +18,7 @@ import { Building2, Eye, RefreshCcw, Search, Check, X } from "lucide-react";
 // ⬇️ Adjust this path to your file that exports reviewSolicitud
 import { reviewSolicitud } from "@/actions/administradores/review-solicitud";
 
-type EstatusSolicitud = "PENDIENTE" | "APROBADA" | "RECHAZADA";
+type EstatusSolicitud = "pendiente" | "aprobada" | "rechazada";
 interface SolicitudItem {
   id: number;
   estatus: EstatusSolicitud | string;
@@ -37,7 +37,7 @@ export function SolicitudesList() {
   const [open, setOpen] = useState(false);
 
   // Review state inside "Ver"
-  const [decision, setDecision] = useState<"" | "APROBADA" | "RECHAZADA">("");
+  const [decision, setDecision] = useState<"" | "aprobada" | "rechazada">("");
   const [observacion, setObservacion] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -81,15 +81,15 @@ export function SolicitudesList() {
 
   function statusBadgeVariant(s?: string) {
     const v = (s || "").toUpperCase();
-    if (v === "APROBADA") return "default" as const;
-    if (v === "RECHAZADA") return "outline" as const;
+    if (v === "APROBADO") return "default" as const;
+    if (v === "RECHAZADO") return "outline" as const;
     return "secondary" as const; // PENDIENTE / otros
   }
 
   function statusBadgeVariant2(s?: string) {
     const v = (s || "").toUpperCase();
-    if (v === "APROBADA") return "secondary" as const;
-    if (v === "RECHAZADA") return "outline" as const;
+    if (v === "APROBADO") return "secondary" as const;
+    if (v === "RECHAZADO") return "outline" as const;
     return "default" as const; // PENDIENTE / otros
   }
   // ...inside your component, keep everything else the same
@@ -125,7 +125,7 @@ async function handleSubmitReview() {
 
   try {
     setSubmitting(true);
-    const estatusToSend = decision === "APROBADA" ? "aprobado" : "rechazado";
+    const estatusToSend = decision === "APROBADA" ? "aprobada" : "rechazada";
 
     const ok = await reviewSolicitud({
       id_solicitud: selected.id,
@@ -230,7 +230,7 @@ async function handleSubmitReview() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={statusBadgeVariant(row.estatus)}>{row.estatus}</Badge>
+                        <Badge variant={statusBadgeVariant(row.estatus)}>{row.estatus.toLowerCase()}</Badge>
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
@@ -272,7 +272,7 @@ async function handleSubmitReview() {
                 <div className="flex justify-between">
                   <span className="text-white/70">Estatus actual</span>
                   <span>
-                    <Badge variant={statusBadgeVariant2(selected.estatus)} className={selected.estatus !== "APROBADA" ? "text-white" : ""}>{selected.estatus}</Badge>
+                    <Badge variant={statusBadgeVariant2(selected.estatus)} className={selected.estatus !== "aprobado" ? "text-white" : "text-black"}>{selected.estatus.toLowerCase()}</Badge>
                   </span>
                 </div>
                 <div className="h-px bg-white/10 my-2" />

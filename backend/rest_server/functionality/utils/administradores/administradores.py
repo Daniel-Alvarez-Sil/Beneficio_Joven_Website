@@ -79,6 +79,15 @@ class ReviewSolicitudNegocioAPIView(APIView):
         )
         detalle.save()
 
+        # Creamos usuario de colaborador
+        if estatus.lower() == "aprobado" and solicitud.id_negocio:
+            admin = AdministradorNegocio.objects.filter(id_negocio=solicitud.id_negocio).first()
+            User.objects.create_user(
+                username=admin.correo,
+                password=admin.contrasena,
+                tipo="colaborador"
+            )
+
         return Response({"message": "Solicitud revisada exitosamente."}, status=status.HTTP_200_OK)
 
 class PromocionesPorNegocioUltimoMes(APIView):
@@ -110,7 +119,6 @@ class PromocionesPorNegocioUltimoMes(APIView):
 
         data = {row['id_negocio__nombre']: row['num_promociones'] for row in qs}
         return Response(data)
-
 
 class CanjesPorNegocioLastMonthView(APIView):
     """

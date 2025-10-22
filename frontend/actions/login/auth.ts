@@ -36,7 +36,7 @@ export async function signup(
     })
 
     const requested = (formData.get('redirectTo') as string) || '/'
-    const dest = ALLOWED_REDIRECTS.has(requested) ? requested : '/'
+    const dest = ALLOWED_REDIRECTS.has(requested) ? requested : '/administrador'
 
     return { success: true, redirectTo: dest }
   } catch (error: any) {

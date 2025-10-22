@@ -73,6 +73,7 @@ export function LoginForm({
 
   useEffect(() => {
     if (state?.success) {
+      // router.replace(state.redirectTo ?? '/administrador');
       router.replace(state.redirectTo ?? '/');
     }
   }, [state?.success, state?.redirectTo, router]);
