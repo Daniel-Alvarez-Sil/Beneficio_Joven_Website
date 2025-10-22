@@ -119,7 +119,7 @@ class Promocion(models.Model):
     fecha_fin = models.DateTimeField()
     imagen = models.ImageField(blank=True, null=True, max_length=500)
     numero_canjeados = models.IntegerField()
-    tipo = models.CharField(max_length=20)
+    tipo = models.CharField(choices=[('precio', 'Precio'), ('porcentaje', 'Porcentaje'), ('2x1', '2x1'), ('trae a un amigo', 'Trae a un amigo'), ('otro', 'Otro')], max_length=20)
     porcentaje = models.DecimalField(max_digits=12, decimal_places=2)
     precio = models.DecimalField(max_digits=12, decimal_places=5)
     # Estatus opciones "activado, desactivado"

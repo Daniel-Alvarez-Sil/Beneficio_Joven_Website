@@ -186,7 +186,10 @@ class PromocionCreateSerializer(serializers.ModelSerializer):
         if precio is None:
             precio = Decimal("0")
 
-        if porcentaje <= 0 and precio <= 0:
+        tipo = attrs.get("descripcion", "").split(':')[0].strip().lower()
+        descripcion = attrs.get("descripcion", "").split(':')[1].strip() if ':' in attrs.get("descripcion", "") else attrs.get("descripcion", "")
+
+        if porcentaje <= 0 and precio <= 0 and tipo not in ['2x1', 'trae a un amigo', 'otro']:
             raise serializers.ValidationError("Debe especificar un porcentaje (> 0) o un precio (> 0).")
 
         if porcentaje < 0 or porcentaje > 100:
@@ -195,8 +198,16 @@ class PromocionCreateSerializer(serializers.ModelSerializer):
         if precio < 0:
             raise serializers.ValidationError({"precio": "No puede ser negativo."})
 
+        # Guardamos la descripción para usarla en create()
+        attrs["descripcion"] = descripcion
+
         # Guardamos el tipo para usarlo en create()
-        attrs["_tipo"] = "porcentaje" if porcentaje > 0 else "precio"
+        if tipo in ['2x1', 'trae a un amigo', 'otro']:
+            attrs["_tipo"] = tipo
+        elif porcentaje > 0:
+            attrs["_tipo"] = "porcentaje"
+        elif precio > 0:
+            attrs["_tipo"] = "precio"
         print("Fin de validación de PromocionCreateSerializer")
         return attrs
     
