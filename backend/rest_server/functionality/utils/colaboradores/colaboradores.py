@@ -7,7 +7,7 @@ from .serializers import (AltaNegocioYAdminSerializer, PromocionListSerializer,
 
 from django.db import transaction, IntegrityError
 
-from ...models import Promocion, Canje, AdministradorNegocio, Cajero 
+from ...models import Promocion, Canje, AdministradorNegocio, Cajero, PromocionCategoria, CodigoQR, Apartado
 from login.models import User
 
 from datetime import timedelta
@@ -108,6 +108,14 @@ class PromocionDeleteView(APIView):
 
         try:
             with transaction.atomic():
+                promocioncategorias = PromocionCategoria.objects.filter(id_promocion=promo_id)
+                promocioncategorias.delete()
+                codigosqr = CodigoQR.objects.filter(id_promocion=promo_id)
+                codigosqr.delete()
+                canjes = Canje.objects.filter(id_promocion=promo_id)
+                canjes.delete()
+                apartados = Apartado.objects.filter(id_promocion=promo_id)
+                apartados.delete()
                 promocion = Promocion.objects.select_for_update().get(pk=promo_id)
                 promocion.delete()
             return Response({"detail": "Promoción eliminada"}, status=status.HTTP_200_OK)

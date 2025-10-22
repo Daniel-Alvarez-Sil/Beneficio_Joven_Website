@@ -125,7 +125,7 @@ async function handleSubmitReview() {
 
   try {
     setSubmitting(true);
-    const estatusToSend = decision === "APROBADA" ? "aprobada" : "rechazada";
+    const estatusToSend = decision === "aprobado" ? "aprobada" : "rechazada";
 
     const ok = await reviewSolicitud({
       id_solicitud: selected.id,

@@ -57,6 +57,7 @@ class ListPromocionesView(APIView):
 
         promociones = Promocion.objects.all()
         serializer = PromocionSerializer(promociones, many=True)
+        print(serializer.data)
         return Response(serializer.data, status=200)
 
 class SuscripcionANegocioView(APIView):
