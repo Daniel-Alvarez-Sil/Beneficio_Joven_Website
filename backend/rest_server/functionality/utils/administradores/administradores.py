@@ -242,30 +242,28 @@ class EstadisticasHeaderView(APIView):
         return Response(combined_data, status=status.HTTP_200_OK)
 
 
+from django.conf import settings
+
 class NegociosResumenView(APIView):
-    permission_classes = [permissions.AllowAny]  # adjust as needed
+    permission_classes = [permissions.AllowAny]
 
     def get(self, request, *args, **kwargs):
-        # Subquery: first admin per negocio (by id ascending)
         admin_sq = AdministradorNegocio.objects.filter(
             id_negocio=OuterRef('pk')
         ).order_by('id')
 
         qs = (
             Negocio.objects
-            # Get the *first* admin fields
             .annotate(
                 admin_id=Subquery(admin_sq.values('id')[:1]),
                 admin_nombre=Subquery(admin_sq.values('nombre')[:1]),
                 admin_usuario=Subquery(admin_sq.values('usuario')[:1]),
                 admin_correo=Subquery(admin_sq.values('correo')[:1]),
             )
-            # Aggregate promotions and redemptions (distinct to avoid join inflation)
             .annotate(
                 num_promociones=Count('promocion__id', distinct=True),
                 total_canje=Count('promocion__canje__id', distinct=True),
             )
-            # Average canjes per promotion (0 if no promotions)
             .annotate(
                 avg_canje_por_promocion=Case(
                     When(
@@ -276,16 +274,31 @@ class NegociosResumenView(APIView):
                     output_field=FloatField()
                 )
             )
-            .order_by('nombre')  # optional, for stable output
+            .order_by('nombre')
             .values(
-                'id', 'nombre', 'estatus',
+                'id', 'nombre', 'estatus', 'logo',
                 'admin_id', 'admin_nombre', 'admin_usuario', 'admin_correo',
                 'num_promociones', 'avg_canje_por_promocion'
             )
         )
 
-        data = [
-            {
+        data = []
+        for row in qs:
+            # ✅ get logo URL properly
+            logo_url = None
+            if row["logo"]:
+                # Case 1: absolute path (S3 or custom storage)
+                if hasattr(Negocio._meta.get_field('logo').storage, 'url'):
+                    logo_url = Negocio._meta.get_field('logo').storage.url(row["logo"])
+                # Case 2: fallback to MEDIA_URL (local)
+                else:
+                    logo_url = f"{settings.MEDIA_URL}{row['logo']}"
+
+                # Build full URL (optional, if you want the domain too)
+                if request:
+                    logo_url = request.build_absolute_uri(logo_url)
+
+            data.append({
                 "id": row["id"],
                 "nombre": row["nombre"],
                 "estatus": row["estatus"],
@@ -297,10 +310,11 @@ class NegociosResumenView(APIView):
                 },
                 "num_promociones": row["num_promociones"],
                 "avg_canje_por_promocion": float(row["avg_canje_por_promocion"] or 0.0),
-            }
-            for row in qs
-        ]
+                "logo": logo_url,
+            })
+
         return Response(data)
+
 
 class ListAllCajerosView(APIView):
     permission_classes = [permissions.AllowAny]  # adjust as needed

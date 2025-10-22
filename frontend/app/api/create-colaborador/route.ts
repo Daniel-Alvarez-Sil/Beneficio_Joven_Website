@@ -8,6 +8,7 @@ export async function POST(req: NextRequest) {
 
     // Forward the FormData to your server-side axios call
     // Note: The provided createColaborador expects a FormData-like object.
+    console.log(formData)
     const ok = await createColaborador(formData);
 
     if (!ok) {

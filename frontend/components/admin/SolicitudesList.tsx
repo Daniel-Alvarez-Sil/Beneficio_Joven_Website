@@ -18,7 +18,7 @@ import { Building2, Eye, RefreshCcw, Search, Check, X } from "lucide-react";
 // ⬇️ Adjust this path to your file that exports reviewSolicitud
 import { reviewSolicitud } from "@/actions/administradores/review-solicitud";
 
-type EstatusSolicitud = "pendiente" | "aprobada" | "rechazada";
+type EstatusSolicitud = "pendiente" | "aprobado" | "rechazado";
 interface SolicitudItem {
   id: number;
   estatus: EstatusSolicitud | string;
@@ -37,7 +37,7 @@ export function SolicitudesList() {
   const [open, setOpen] = useState(false);
 
   // Review state inside "Ver"
-  const [decision, setDecision] = useState<"" | "aprobada" | "rechazada">("");
+  const [decision, setDecision] = useState<"" | "APROBADA" | "RECHAZADA">("");
   const [observacion, setObservacion] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -59,7 +59,7 @@ export function SolicitudesList() {
   const filtered = useMemo(() => {
     let rows = data;
     if (status !== "TODAS") {
-      rows = rows.filter((r) => (r.estatus || "").toUpperCase() === status);
+      rows = rows.filter((r) => (r.estatus || "").toUpperCase() === status.toUpperCase());
     }
     const needle = q.trim().toLowerCase();
     if (!needle) return rows;
@@ -187,8 +187,8 @@ async function handleSubmitReview() {
           <TabsList className="glass bg-white/10 border-white/20">
             <TabsTrigger value="TODAS" className="text-white data-[state=active]:bg-white/15">Todas</TabsTrigger>
             <TabsTrigger value="PENDIENTE" className="text-white data-[state=active]:bg-white/15">Pendiente</TabsTrigger>
-            <TabsTrigger value="APROBADA" className="text-white data-[state=active]:bg-white/15">Aprobada</TabsTrigger>
-            <TabsTrigger value="RECHAZADA" className="text-white data-[state=active]:bg-white/15">Rechazada</TabsTrigger>
+            <TabsTrigger value="APROBADO" className="text-white data-[state=active]:bg-white/15">Aprobada</TabsTrigger>
+            <TabsTrigger value="RECHAZADO" className="text-white data-[state=active]:bg-white/15">Rechazada</TabsTrigger>
           </TabsList>
         </Tabs>
 
