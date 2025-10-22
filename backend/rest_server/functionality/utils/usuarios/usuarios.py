@@ -160,3 +160,79 @@ class ListPromocionesApartadasView(APIView):
         promociones = Promocion.objects.filter(id__in=[a.id_promocion_id for a in apartados])
         serializer = PromocionSerializer(promociones, many=True)
         return Response(serializer.data, status=200)
+    
+class ListAllNegociosMapView(APIView):
+    permission_classes = [AllowAny]
+
+    """
+    Response shape:
+    {
+      "businesses": [
+        {
+          "name": "Negocio Ejemplo 1",
+          "url_maps": "https://maps.google.com/?q=19.4326,-99.1332",
+          "address": "Calle Ejemplo 123, Colonia Centro, Ciudad de México, CDMX, CP 01000"
+        }
+      ]
+    }
+    """
+
+    def get(self, request):
+        negocios = (
+            Negocio.objects
+            .only(
+                "nombre", "url_maps",
+                "cp", "numero_ext", "numero_int",
+                "colonia", "municipio", "estado"
+                # If your model has a street field named "calle", the next line helps:
+                # "calle"
+            )
+        )
+
+        def format_address(n: Negocio) -> str:
+            # Pull values safely; include "calle" if it exists in your model
+            calle = getattr(n, "calle", None)
+            numero_ext = (n.numero_ext or "").strip()
+            numero_int = (n.numero_int or "").strip()
+            colonia = (n.colonia or "").strip()
+            municipio = (n.municipio or "").strip()
+            estado = (n.estado or "").strip()
+            cp = (n.cp or "").strip()
+
+            # Build "Calle ... 123" if we have street or number info
+            street_bits = []
+            if calle:
+                street_bits.append(calle)
+            if numero_ext:
+                street_bits.append(numero_ext)
+            street = " ".join(street_bits) if street_bits else ""
+
+            # Add "Int. X" when present
+            if numero_int:
+                street = (street + f", Int. {numero_int}").strip(", ")
+
+            parts = []
+            if street:
+                parts.append(street)
+            if colonia:
+                parts.append(colonia)
+            # Municipality + State
+            city_state = ", ".join([p for p in [municipio, estado] if p])
+            if city_state:
+                parts.append(city_state)
+            if cp:
+                parts.append(f"CP {cp}")
+
+            return ", ".join(parts)
+
+        resultado = [
+            {
+                "name": n.nombre,
+                "url_maps": n.url_maps or "",
+                "address": format_address(n)
+            }
+            for n in negocios
+        ]
+
+        return Response({"businesses": resultado}, status=200)
+

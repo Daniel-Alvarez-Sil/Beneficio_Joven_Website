@@ -636,7 +636,7 @@ export function ColaboradorPromociones({
               return (
                 <Card
                   key={p.id}
-                  className="glass border border-white/15 hover:shadow-lg transition-shadow overflow-hidden"
+                  className="glass border border-white/15 hover:shadow-lg transition-shadow overflow-hidden pt-0"
                 >
                   <div className="grid grid-cols-1 md:grid-cols-[120px,1fr] gap-4">
                     {/* Columna imagen */}
