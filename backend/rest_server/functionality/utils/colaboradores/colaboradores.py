@@ -48,7 +48,7 @@ class PromocionListView(APIView):
         promociones = Promocion.objects.filter(id_negocio=id_negocio).only(
             "id",
             "nombre", "descripcion", "fecha_inicio", "fecha_fin",
-            "tipo", "porcentaje", "precio", "activo", "numero_canjeados"
+            "tipo", "porcentaje", "precio", "activo", "numero_canjeados", "imagen"
         )
 
         serializer = PromocionListSerializer(promociones, many=True)

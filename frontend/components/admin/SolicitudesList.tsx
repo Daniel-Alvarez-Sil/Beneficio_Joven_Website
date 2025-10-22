@@ -6,11 +6,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogOverlay } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Building2, Eye, RefreshCcw, Search } from "lucide-react";
+import { Building2, Eye, RefreshCcw, Search, Check, X } from "lucide-react";
+
+// ⬇️ Adjust this path to your file that exports reviewSolicitud
+import { reviewSolicitud } from "@/actions/administradores/review-solicitud";
 
 type EstatusSolicitud = "PENDIENTE" | "APROBADA" | "RECHAZADA";
 interface SolicitudItem {
@@ -25,8 +31,15 @@ export function SolicitudesList() {
   const [loading, setLoading] = useState(false);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"TODAS" | EstatusSolicitud>("TODAS");
+
+  // Single dialog (Ver + Revisar dentro)
   const [selected, setSelected] = useState<SolicitudItem | null>(null);
   const [open, setOpen] = useState(false);
+
+  // Review state inside "Ver"
+  const [decision, setDecision] = useState<"" | "APROBADA" | "RECHAZADA">("");
+  const [observacion, setObservacion] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   async function fetchSolicitudes() {
     try {
@@ -41,7 +54,6 @@ export function SolicitudesList() {
       setLoading(false);
     }
   }
-
   useEffect(() => { fetchSolicitudes(); }, []);
 
   const filtered = useMemo(() => {
@@ -52,7 +64,14 @@ export function SolicitudesList() {
     const needle = q.trim().toLowerCase();
     if (!needle) return rows;
     return rows.filter((r) => {
-      const haystack = [r.negocio?.nombre, r.negocio?.correo, r.negocio?.telefono, r.estatus, String(r.id), String(r.negocio?.id)]
+      const haystack = [
+        r.negocio?.nombre,
+        r.negocio?.correo,
+        r.negocio?.telefono,
+        r.estatus,
+        String(r.id),
+        String(r.negocio?.id),
+      ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
@@ -66,6 +85,74 @@ export function SolicitudesList() {
     if (v === "RECHAZADA") return "outline" as const;
     return "secondary" as const; // PENDIENTE / otros
   }
+
+  function statusBadgeVariant2(s?: string) {
+    const v = (s || "").toUpperCase();
+    if (v === "APROBADA") return "secondary" as const;
+    if (v === "RECHAZADA") return "outline" as const;
+    return "default" as const; // PENDIENTE / otros
+  }
+  // ...inside your component, keep everything else the same
+
+function openVer(row: SolicitudItem) {
+  setSelected(row);
+  setDecision("");
+  setObservacion("");
+  setOpen(true);
+}
+
+async function handleSubmitReview() {
+  if (!selected) return;
+
+  // ⛔ Extra safety: block submission if not pending
+  const isPendiente =
+    String(selected.estatus || "").toUpperCase() === "PENDIENTE";
+  if (!isPendiente) {
+    toast.message("Sin cambios", {
+      description: "La solicitud ya no está pendiente.",
+    });
+    return;
+  }
+
+  if (decision === "") {
+    toast.error("Selecciona una acción", { description: "Aprobar o rechazar la solicitud." });
+    return;
+  }
+  if (decision === "RECHAZADA" && !observacion.trim()) {
+    toast.error("Observaciones requeridas", { description: "Indica el motivo del rechazo." });
+    return;
+  }
+
+  try {
+    setSubmitting(true);
+    const estatusToSend = decision === "APROBADA" ? "aprobado" : "rechazado";
+
+    const ok = await reviewSolicitud({
+      id_solicitud: selected.id,
+      estatus: estatusToSend,
+      observaciones: decision === "RECHAZADA" ? observacion.trim() : "",
+    });
+
+    if (!ok) throw new Error("No se pudo registrar la revisión.");
+
+    setData((prev) =>
+      prev.map((r) => (r.id === selected.id ? { ...r, estatus: decision } : r))
+    );
+
+    toast.success(
+      decision === "APROBADA" ? "Solicitud aprobada" : "Solicitud rechazada",
+      { description: `ID ${selected.id} • ${selected.negocio?.nombre}` }
+    );
+
+    setOpen(false);
+    setSelected(null);
+  } catch (err: any) {
+    toast.error("Error al revisar solicitud", { description: err?.message ?? "Intenta nuevamente." });
+  } finally {
+    setSubmitting(false);
+  }
+}
+
 
   return (
     <Card className="glass-alt text-white">
@@ -96,7 +183,6 @@ export function SolicitudesList() {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Status filter */}
         <Tabs value={status} onValueChange={(v) => setStatus(v as any)}>
           <TabsList className="glass bg-white/10 border-white/20">
             <TabsTrigger value="TODAS" className="text-white data-[state=active]:bg-white/15">Todas</TabsTrigger>
@@ -106,7 +192,6 @@ export function SolicitudesList() {
           </TabsList>
         </Tabs>
 
-        {/* Table */}
         {loading ? (
           <div className="py-12 text-center text-sm text-white/70">Cargando solicitudes…</div>
         ) : filtered.length === 0 ? (
@@ -152,11 +237,12 @@ export function SolicitudesList() {
                           variant="outline"
                           size="sm"
                           className="text-white border-white/30"
-                          onClick={() => { setSelected(row); setOpen(true); }}
+                          onClick={() => openVer(row)}
                         >
                           <Eye className="w-3 h-3 mr-1" />
                           Ver
                         </Button>
+                        {/* ⬆️ Only "Ver" remains; review happens inside the dialog */}
                       </TableCell>
                     </TableRow>
                   );
@@ -167,39 +253,130 @@ export function SolicitudesList() {
         )}
       </CardContent>
 
-      {/* Detail dialog */}
+      {/* "Ver" dialog now includes the review controls */}
       <Dialog open={open} onOpenChange={setOpen}>
+        <DialogOverlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
         <DialogContent className="sm:max-w-md glass-alt text-white border-white/20">
           <DialogHeader>
             <DialogTitle className="text-white">Detalle de solicitud</DialogTitle>
           </DialogHeader>
-          {selected ? (
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-white/70">Solicitud ID</span>
-                <span className="font-medium text-white">{selected.id}</span>
+
+          {selected && (
+            <div className="space-y-4 text-sm">
+              {/* Datos */}
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-white/70">Solicitud ID</span>
+                  <span className="font-medium text-white">{selected.id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/70">Estatus actual</span>
+                  <span>
+                    <Badge variant={statusBadgeVariant2(selected.estatus)} className={selected.estatus !== "APROBADA" ? "text-white" : ""}>{selected.estatus}</Badge>
+                  </span>
+                </div>
+                <div className="h-px bg-white/10 my-2" />
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="text-white/70">Negocio</div>
+                  <div className="font-medium text-white">{selected.negocio?.nombre}</div>
+                  <div className="text-white/70">Negocio ID</div>
+                  <div className="font-medium text-white">{selected.negocio?.id}</div>
+                  <div className="text-white/70">Correo</div>
+                  <div className="font-medium text-white">{selected.negocio?.correo}</div>
+                  <div className="text-white/70">Teléfono</div>
+                  <div className="font-medium text-white">{selected.negocio?.telefono}</div>
+                  <div className="text-white/70">Estatus negocio</div>
+                  <div className="font-medium text-white">{selected.negocio?.estatus}</div>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-white/70">Estatus</span>
-                <span>
-                  <Badge variant={statusBadgeVariant(selected.estatus)}>{selected.estatus}</Badge>
-                </span>
-              </div>
-              <div className="h-px bg-white/10 my-2" />
-              <div className="grid grid-cols-2 gap-2">
-                <div className="text-white/70">Negocio</div>
-                <div className="font-medium text-white">{selected.negocio?.nombre}</div>
-                <div className="text-white/70">Negocio ID</div>
-                <div className="font-medium text-white">{selected.negocio?.id}</div>
-                <div className="text-white/70">Correo</div>
-                <div className="font-medium text-white">{selected.negocio?.correo}</div>
-                <div className="text-white/70">Teléfono</div>
-                <div className="font-medium text-white">{selected.negocio?.telefono}</div>
-                <div className="text-white/70">Estatus negocio</div>
-                <div className="font-medium text-white">{selected.negocio?.estatus}</div>
-              </div>
+              {/* Revisión */}
+              <div className="h-px bg-white/10" />
+
+              {(() => {
+                const isPendiente =
+                  String(selected?.estatus || "").toUpperCase() === "PENDIENTE";
+
+                if (!isPendiente) {
+                  // 🚫 Not pending: hide controls, show a helpful note
+                  return (
+                    <div className="text-sm text-white/70">
+                      Esta solicitud ya fue revisada con estatus de <span className="font-medium text-white">{String(selected?.estatus)}</span>.
+                    </div>
+                  );
+                }
+
+                // ✅ Pending: show approve/reject controls
+                return (
+                  <div className="space-y-3">
+                    <Label className="text-white">Revisar solicitud</Label>
+
+                    <RadioGroup
+                      value={decision}
+                      onValueChange={(v) => setDecision(v as any)}
+                      className="grid grid-cols-2 gap-2"
+                    >
+                      <div className="flex items-center space-x-2 rounded-lg border border-white/20 px-3 py-2">
+                        <RadioGroupItem
+                          value="APROBADA"
+                          id="r-ap"
+                          className="border-white/40 text-white/60 data-[state=checked]:text-white data-[state=checked]:border-white"
+                        />
+                        <Label htmlFor="r-ap" className="flex items-center gap-1 cursor-pointer">
+                          <Check className="w-4 h-4" /> Aprobar
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2 rounded-lg border border-white/20 px-3 py-2">
+                        <RadioGroupItem
+                          value="RECHAZADA"
+                          id="r-re"
+                          className="border-white/40 text-white/60 data-[state=checked]:text-white data-[state=checked]:border-white"
+                        />
+                        <Label htmlFor="r-re" className="flex items-center gap-1 cursor-pointer">
+                          <X className="w-4 h-4" /> Rechazar
+                        </Label>
+                      </div>
+                    </RadioGroup>
+
+                    <div className="space-y-2">
+                      <Label className={`text-white ${decision === "RECHAZADA" ? "" : "opacity-60"}`}>
+                        Observaciones {decision === "RECHAZADA" ? "(requerido)" : "(opcional)"}
+                      </Label>
+                      <Textarea
+                        value={observacion}
+                        onChange={(e) => setObservacion(e.target.value)}
+                        placeholder="Escribe el motivo del rechazo…"
+                        disabled={decision !== "RECHAZADA"}
+                        className="min-h-[96px] bg-white/10 border-white/20 text-white placeholder:text-white/60"
+                      />
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        className="border-white/30 text-black/70"
+                        onClick={() => setOpen(false)}
+                        disabled={submitting}
+                      >
+                        Cerrar
+                      </Button>
+                      <Button
+                        onClick={handleSubmitReview}
+                        disabled={
+                          submitting ||
+                          decision === "" ||
+                          (decision === "RECHAZADA" && !observacion.trim())
+                        }
+                      >
+                        {submitting ? "Guardando…" : "Guardar"}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })()}
+
+             
             </div>
-          ) : null}
+          )}
         </DialogContent>
       </Dialog>
     </Card>

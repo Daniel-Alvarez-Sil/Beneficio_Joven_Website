@@ -52,11 +52,12 @@ class ReviewSolicitudNegocioAPIView(APIView):
         data = request.data
         id_solicitud = data.get("id_solicitud")
         user = User.objects.get(id=request.user.id)
-        id_administrador = Administrador.objects.get(correo=user.username).id if Administrador.objects.filter(correo=user.username).exists() else None
+        id_administrador = Administrador.objects.get(Q(correo=user.username)).id if Administrador.objects.filter(correo=user.username).exists() else None
         estatus = data.get("estatus")
         observaciones = data.get("observaciones", "")
 
         if not all([id_solicitud, id_administrador, estatus]):
+            print("Faltan campos obligatorios.")
             return Response({"error": "Faltan campos obligatorios."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:

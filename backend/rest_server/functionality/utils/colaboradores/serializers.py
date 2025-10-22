@@ -137,6 +137,7 @@ class PromocionListSerializer(serializers.ModelSerializer):
             "precio",
             "activo",
             "numero_canjeados",
+            "imagen",
         )
 
 class DeleteUpdatePromocionSerializer(serializers.Serializer):
