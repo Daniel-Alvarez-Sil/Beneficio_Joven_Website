@@ -3,13 +3,15 @@
 
 import axios from 'axios'
 import { withAuthRetry } from '@/lib/login/auth-wrapper'
+import { log } from 'console'
+import { Form } from 'react-hook-form'
 
 const apiHost = process.env.API_HOST
 
 // Acepta FormData (con archivo) o JSON plano (sin archivo)
 export async function createPromocion(payload: FormData | Record<string, any>) {
   const isFormData = typeof FormData !== 'undefined' && payload instanceof FormData
-
+  console.log(payload)
   const result = await withAuthRetry((token) =>
     axios.post(
       `${apiHost}/functionality/promociones/create/`,
