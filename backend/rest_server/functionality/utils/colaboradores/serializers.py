@@ -346,7 +346,7 @@ class AltaCajeroSerializer(serializers.ModelSerializer):
         except User.DoesNotExist:
             raise serializers.ValidationError({"id_negocio": "Usuario autenticado inválido."})
         try:
-            administradorNegocio = AdministradorNegocio.objects.get(usuario=username)
+            administradorNegocio = AdministradorNegocio.objects.get(Q(usuario=username) | Q(correo=username))
         except AdministradorNegocio.DoesNotExist:
             raise serializers.ValidationError({"id_negocio": "AdministradorNegocio no encontrado para el usuario."})
         except MultipleObjectsReturned:
