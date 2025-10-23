@@ -13,9 +13,10 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<"home" | "colaboradores" | "solicitudes">("home");
 
   return (
-    <div className="min-h-screen dark bg-[#0a0d14] text-white auth-bg">
+    <div className="dark min-h-screen auth-bg text-white relative">
       {/* Aurora global */}
       <div className="auth-aurora" />
+      <div className="auth-stars" />
 
       {/* Header */}
       <AdminHeader />
@@ -23,26 +24,60 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
       {/* Tabs & content */}
       <div className="max-w-7xl mx-auto p-6">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-          <TabsList className="grid w-full grid-cols-3 glass border-white/20 bg-white/10">
+          <TabsList
+            className="
+              flex w-fit mx-auto
+              rounded-2xl
+              bg-white/10 backdrop-blur
+              border border-white/20
+              p-1.5 gap-2
+              shadow-sm
+            "
+            aria-label="Navegación del panel"
+          >
             <TabsTrigger
               value="home"
-              className="text-white data-[state=active]:bg-white/15 data-[state=active]:text-white rounded-xl"
+              className="
+                rounded-xl px-6 py-3
+                text-sm font-medium text-white/80
+                data-[state=active]:bg-white/25
+                data-[state=active]:text-white
+                hover:bg-white/15
+                transition-all
+              "
             >
               Dashboard
             </TabsTrigger>
+
             <TabsTrigger
               value="colaboradores"
-              className="text-white data-[state=active]:bg-white/15 data-[state=active]:text-white rounded-xl"
+              className="
+                rounded-xl px-6 py-3
+                text-sm font-medium text-white/80
+                data-[state=active]:bg-white/25
+                data-[state=active]:text-white
+                hover:bg-white/15
+                transition-all
+              "
             >
               Colaboradores
             </TabsTrigger>
+
             <TabsTrigger
               value="solicitudes"
-              className="text-white data-[state=active]:bg-white/15 data-[state=active]:text-white rounded-xl"
+              className="
+                rounded-xl px-6 py-3
+                text-sm font-medium text-white/80
+                data-[state=active]:bg-white/25
+                data-[state=active]:text-white
+                hover:bg-white/15
+                transition-all
+              "
             >
               Solicitudes
             </TabsTrigger>
           </TabsList>
+
 
           <TabsContent value="home" className="space-y-6">
             <DashboardOverview />

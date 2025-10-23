@@ -26,7 +26,7 @@ export default function App() {
   const idNegocio = '3'; // ⬅️ cámbialo cuando lo obtengas de tu store/auth
 
   return (
-    <div className="relative min-h-screen text-white">
+    <div className="dark relative min-h-screen text-white">
       {/* Fondo aurora si quieres repetir el look del login */}
       <div className="auth-aurora" />
       <div className="auth-stars" />
