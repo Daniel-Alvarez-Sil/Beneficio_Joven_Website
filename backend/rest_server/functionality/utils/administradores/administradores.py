@@ -88,6 +88,8 @@ class ReviewSolicitudNegocioAPIView(APIView):
         # Creamos usuario de colaborador
         if estatus.lower() == "aprobado" and solicitud.id_negocio:
             admin = AdministradorNegocio.objects.filter(id_negocio=solicitud.id_negocio).first()
+            admin.usuario = admin.correo
+            admin.save()
             User.objects.create_user(
                 username=admin.correo,
                 password=admin.contrasena,

@@ -160,7 +160,7 @@ class EstadisticasNegocioView(APIView):
         id_administrador_negocio = request.user.id if request.user and request.user.is_authenticated else None
         username = User.objects.get(id=id_administrador_negocio).username if id_administrador_negocio else None
         print(username)
-        administradorNegocio = AdministradorNegocio.objects.get(usuario=username) 
+        administradorNegocio = AdministradorNegocio.objects.get(Q(usuario=username) | Q(correo=username)) 
         if administradorNegocio:
             print(administradorNegocio.id_negocio)
         else:
