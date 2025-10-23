@@ -251,7 +251,7 @@ class PromocionCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"id_negocio": "Usuario autenticado inválido."})
 
         try:
-            administradorNegocio = AdministradorNegocio.objects.get(usuario=username)
+            administradorNegocio = AdministradorNegocio.objects.get(Q(usuario=username) | Q(correo=username))
         except AdministradorNegocio.DoesNotExist:
             administradorNegocio = Cajero.objects.get(Q(usuario=username)| Q(correo=username))
             # raise serializers.ValidationError({"id_negocio": "AdministradorNegocio no encontrado para el usuario."})
