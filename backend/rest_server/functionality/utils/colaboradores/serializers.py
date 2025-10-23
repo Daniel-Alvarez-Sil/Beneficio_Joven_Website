@@ -189,7 +189,7 @@ class PromocionCreateSerializer(serializers.ModelSerializer):
         tipo = attrs.get("descripcion", "").split(':')[0].strip().lower()
         descripcion = attrs.get("descripcion", "").split(':')[1].strip() if ':' in attrs.get("descripcion", "") else attrs.get("descripcion", "")
 
-        if porcentaje <= 0 and precio <= 0 and tipo not in ['2x1', 'trae a un amigo', 'otro']:
+        if porcentaje <= 0 and precio <= 0 and tipo not in ['2x1', 'Trae a un amigo', 'Otra']:
             raise serializers.ValidationError("Debe especificar un porcentaje (> 0) o un precio (> 0).")
 
         if porcentaje < 0 or porcentaje > 100:

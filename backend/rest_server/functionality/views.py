@@ -8,7 +8,7 @@ from .utils.administradores.administradores import (SolicitudNegocioListView,
                     PromocionesPorNegocioUltimoMes, CanjesPorNegocioLastMonthView, 
                     TotalColaboradoresView, PromocionesActivasPorNegocioAPIView,
                     EstadisticasHeaderView, NegociosResumenView, ReviewSolicitudNegocioAPIView,
-                    ListAllCajerosView)
+                    ListAllCajerosView, detalleNegocioView)
 
 # Cajeros Views
 from .utils.cajeros.cajeros import (validarQRView)

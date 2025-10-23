@@ -3,7 +3,8 @@ from django.urls import path
 # Administrador View
 from .views import (AdministradorNegocioCreateView, PromocionListView, 
                     PromocionDeleteView, PromocionUpdateView, PromocionCreateView, 
-                    EstadisticasNegocioView, ReviewSolicitudNegocioAPIView, )
+                    EstadisticasNegocioView, ReviewSolicitudNegocioAPIView, 
+                    detalleNegocioView)
 
 # Colaboradores Views
 from .views import (PromocionesPorNegocioUltimoMes, SolicitudNegocioListView, CanjesPorNegocioLastMonthView,
@@ -47,6 +48,7 @@ urlpatterns = [
     path("estadisticas/header/", EstadisticasHeaderView.as_view(), name="estadisticas-header"),
     path("negocios/resumen/", NegociosResumenView.as_view(), name="negocios-resumen"),
     path("solicitudes-negocio/review/", ReviewSolicitudNegocioAPIView.as_view(), name="review-solicitud-negocio"),
+    path("negocio/detalle/", detalleNegocioView.as_view(), name="detalle-negocio"),
 
     # Usuarios
     path("usuario/codigo-qr/", CodigoQRView.as_view(), name="codigo-qr"),

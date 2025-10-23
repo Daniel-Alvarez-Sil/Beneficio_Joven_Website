@@ -27,29 +27,65 @@ import {
 } from "recharts"
 import { getEstadisticas, type EstadisticasResponse } from "@/actions/colaboradores/get-estadisticas"
 
-// =========================
-// Tipos
-// =========================
+/* =========================
+   Zona horaria fija (UTC-6)
+   ========================= */
+const MX_TZ = "America/Mexico_City"
+
+// Para ISO completos (con Z o +hh:mm), `new Date(iso)` es suficiente.
+function parseISO(iso: string): Date {
+  return new Date(iso)
+}
+
+// Construye YYYY-MM-DD **en MX_TZ** para agrupar por día local.
+function ymdInTZ(d: Date, tz = MX_TZ): string {
+  const parts = new Intl.DateTimeFormat("es-MX", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d)
+
+  const y = parts.find(p => p.type === "year")!.value
+  const m = parts.find(p => p.type === "month")!.value
+  const dd = parts.find(p => p.type === "day")!.value
+  return `${y}-${m}-${dd}` // YYYY-MM-DD local MX
+}
+
+// Cuando tenemos **claves de día** "YYYY-MM-DD" (ya en MX local),
+// creamos un Date seguro en **mediodía UTC** para evitar rollback de día al formatear.
+function dateFromYmdLocalMX(ymd: string): Date {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd)
+  if (!m) return new Date(NaN)
+  const [_, Y, M, D] = m
+  // 12:00 UTC = 06:00 MX aprox, sigue siendo el mismo día calendario en MX
+  return new Date(Date.UTC(Number(Y), Number(M) - 1, Number(D), 12, 0, 0))
+}
+
+// Formateador corto que acepta ISO completo o YYYY-MM-DD (clave local MX)
+const fmtDateShortMX = (s: string) => {
+  const d = s.includes("T") ? parseISO(s) : dateFromYmdLocalMX(s)
+  if (Number.isNaN(d.getTime())) return s
+  return d.toLocaleDateString("es-MX", { timeZone: MX_TZ, month: "short", day: "numeric" })
+}
+
+/* =========================
+   Tipos
+   ========================= */
 interface ColaboradorDashboardProps {
   onLogout: () => void
   colaboradorName: string
   idNegocio?: string
 }
 
-// =========================
-// Utilidades locales
-// =========================
+/* =========================
+   Utilidades locales
+   ========================= */
 const fmtNumber = (n: number) =>
   new Intl.NumberFormat("es-MX", { maximumFractionDigits: 0 }).format(n)
 
 const fmtCurrency = (n: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(n)
-
-const fmtDateShort = (iso: string) => {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleDateString("es-MX", { month: "short", day: "numeric" })
-}
 
 export function ColaboradorDashboard({
   onLogout,
@@ -78,9 +114,9 @@ export function ColaboradorDashboard({
     fetchData()
   }, [fetchData])
 
-  // =========================
-  // Normalizadores / datasets
-  // =========================
+  /* =========================
+     Normalizadores / datasets
+     ========================= */
   const totalCanjes = useMemo(() => {
     if (!stats) return 0
     const n = Number((stats as any).num_canjes_total_de_todas_las_promociones ?? 0)
@@ -104,57 +140,56 @@ export function ColaboradorDashboard({
   }, [stats])
 
   /**
-   * Historico: { "fecha-hora": [titulo, monto_descuento] }
-   * Agrupamos por YYYY-MM-DD
+   * Historico: { "fecha_hora": ISO, titulo, monto_descuento }  (Caso A)
+   *            { "ISO date": [titulo, monto] } mezclado con otras claves (Caso B)
+   * Se agrupa por YYYY-MM-DD **en America/Mexico_City**
    */
   const historicoData = useMemo(() => {
-  const src = stats?.historico_de_canjes_ultimos_siete_dias ?? [];
-  const byDate = new Map<string, { date: string; canjes: number; monto_total_descuento: number }>();
+    const src = stats?.historico_de_canjes_ultimos_siete_dias ?? []
+    const byDate = new Map<string, { date: string; canjes: number; monto_total_descuento: number }>()
 
-  for (const item of src) {
-    // 1) Caso A: formato tipo { fecha_hora: ISO, titulo: string, monto_descuento: number }
-    if (
-      item &&
-      typeof item === "object" &&
-      "fecha_hora" in item &&
-      (typeof (item as any).fecha_hora === "string" || (item as any).fecha_hora instanceof Date)
-    ) {
-      const iso = String((item as any).fecha_hora);
-      const d = new Date(iso);
-      if (!Number.isNaN(d.getTime())) {
-        const key = d.toISOString().slice(0, 10); // YYYY-MM-DD
-        const monto = Number((item as any).monto_descuento ?? 0);
-        const prev = byDate.get(key) ?? { date: key, canjes: 0, monto_total_descuento: 0 };
-        prev.canjes += 1;
-        prev.monto_total_descuento += Number.isFinite(monto) ? monto : 0;
-        byDate.set(key, prev);
+    for (const item of src) {
+      // Caso A
+      if (
+        item &&
+        typeof item === "object" &&
+        "fecha_hora" in item &&
+        (typeof (item as any).fecha_hora === "string" || (item as any).fecha_hora instanceof Date)
+      ) {
+        const iso = String((item as any).fecha_hora)
+        const d = parseISO(iso)
+        if (!Number.isNaN(d.getTime())) {
+          const key = ymdInTZ(d) // YYYY-MM-DD MX
+          const monto = Number((item as any).monto_descuento ?? 0)
+          const prev = byDate.get(key) ?? { date: key, canjes: 0, monto_total_descuento: 0 }
+          prev.canjes += 1
+          prev.monto_total_descuento += Number.isFinite(monto) ? monto : 0
+          byDate.set(key, prev)
+        }
+        continue
       }
-      continue;
+
+      // Caso B
+      for (const [k, v] of Object.entries(item ?? {})) {
+        const d = parseISO(k) // si k es ISO con zona, funciona; si no, será inválido y se ignora
+        if (Number.isNaN(d.getTime())) continue
+        const key = ymdInTZ(d) // YYYY-MM-DD MX
+        const monto = Array.isArray(v) ? Number(v[1] ?? 0) : 0
+        const prev = byDate.get(key) ?? { date: key, canjes: 0, monto_total_descuento: 0 }
+        prev.canjes += 1
+        prev.monto_total_descuento += Number.isFinite(monto) ? monto : 0
+        byDate.set(key, prev)
+      }
     }
 
-    // 2) Caso B: formato tipo { "ISO-date": [titulo, monto] }
-    //    Iteramos las entradas y tomamos solo las que sean fecha ISO válida
-    for (const [k, v] of Object.entries(item ?? {})) {
-      const d = new Date(k);
-      if (Number.isNaN(d.getTime())) continue; // ignora claves como "titulo"
-      const key = d.toISOString().slice(0, 10);
-      const monto = Array.isArray(v) ? Number(v[1] ?? 0) : 0;
-      const prev = byDate.get(key) ?? { date: key, canjes: 0, monto_total_descuento: 0 };
-      prev.canjes += 1;
-      prev.monto_total_descuento += Number.isFinite(monto) ? monto : 0;
-      byDate.set(key, prev);
-    }
-  }
+    const arr = Array.from(byDate.values()).filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x.date))
+    arr.sort((a, b) => (a.date < b.date ? -1 : 1))
+    return arr
+  }, [stats])
 
-  // Ordena por fecha ascendente y filtra cualquier basura
-  const arr = Array.from(byDate.values()).filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x.date));
-  arr.sort((a, b) => (a.date < b.date ? -1 : 1));
-  return arr;
-}, [stats]);
-
-  // =========================
-  // Chart configs (SHADCN)
-  // =========================
+  /* =========================
+     Chart configs (SHADCN)
+     ========================= */
   const barConfig: ChartConfig = {
     canjes: { label: "Canjes", color: "hsl(var(--chart-1))" },
   }
@@ -169,9 +204,6 @@ export function ColaboradorDashboard({
       {/* Fondo aurora reutilizando tu clase global */}
       <div className="auth-aurora" />
       <div className="auth-stars" />
-
-      {/* Header opcional (si lo renderizas en layout, quítalo de aquí) */}
-      {/* <ColaboradorHeader /> */}
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         {/* Toolbar */}
@@ -240,7 +272,7 @@ export function ColaboradorDashboard({
               <div className="text-4xl font-bold tracking-tight text-white/70">
                 {loading || historicoData.length === 0
                   ? "—"
-                  : `${fmtDateShort(historicoData[0].date)} – ${fmtDateShort(historicoData[historicoData.length - 1].date)}`}
+                  : `${fmtDateShortMX(historicoData[0].date)} – ${fmtDateShortMX(historicoData[historicoData.length - 1].date)}`}
               </div>
               <p className="text-xs text-white/60 mt-2">Últimos 7 días con actividad.</p>
             </CardContent>
@@ -255,14 +287,11 @@ export function ColaboradorDashboard({
               <CardTitle className="text-white">Top 5: más canjes</CardTitle>
             </CardHeader>
             <CardContent>
-              {/* Fija paleta para charts en dark */}
               <ChartContainer
                 config={barConfig}
                 className="h-64 w-full"
                 style={
                   {
-                    // colores de serie (rechart usa estos CSS vars del shadcn container)
-                    // ["--color-canjes" as any]: "hsl(var(--chart-1))",
                     "--color-canjes": "#38bdf8",
                   } as React.CSSProperties
                 }
@@ -306,8 +335,6 @@ export function ColaboradorDashboard({
                 className="chart-dark aspect-auto h-[260px] w-full"
                 style={
                   {
-                    // ["--color-canjes" as any]: "hsl(var(--chart-1))",
-                    // ["--color-monto_total_descuento" as any]: "hsl(var(--chart-2))",
                     "--color-canjes": "#38bdf8",
                     "--color-monto_total_descuento": "#a056ebff",
                   } as React.CSSProperties
@@ -324,9 +351,7 @@ export function ColaboradorDashboard({
                       <stop offset="95%" stopColor="var(--color-monto_total_descuento)" stopOpacity={0.1} />
                     </linearGradient>
                   </defs>
-                  
-                  {/* Líneas del fondo */}
-                  {/* <CartesianGrid vertical={false} stroke="rgba(255,255,255,.12)" /> */}
+
                   <CartesianGrid stroke="rgba(255,255,255,0.1)" vertical={false} />
 
                   {/* Eje X (fechas) */}
@@ -339,8 +364,13 @@ export function ColaboradorDashboard({
                     interval="preserveStartEnd"
                     tick={{ fill: "rgba(255,255,255,.75)" }}
                     tickFormatter={(value: string) => {
-                      const d = new Date(value)
-                      return d.toLocaleDateString("es-MX", { month: "short", day: "numeric" })
+                      // value es la clave YYYY-MM-DD (local MX)
+                      const d = dateFromYmdLocalMX(value)
+                      return d.toLocaleDateString("es-MX", {
+                        timeZone: MX_TZ,
+                        month: "short",
+                        day: "numeric",
+                      })
                     }}
                   />
 
@@ -352,9 +382,9 @@ export function ColaboradorDashboard({
                     allowDecimals={false}
                   />
 
-                  {/* Tooltip (al pasar el mouse) */}
+                  {/* Tooltip */}
                   <ChartTooltip
-                    cursor={false}
+                    cursor={true}
                     content={
                       <ChartTooltipContent
                         contentStyle={{
@@ -364,8 +394,16 @@ export function ColaboradorDashboard({
                         }}
                         labelStyle={{ color: '#fff' }}
                         labelFormatter={(value) => {
-                          const d = new Date(String(value))
-                          return d.toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short", year: "numeric" })
+                          // value puede ser YYYY-MM-DD (clave) o ISO con TZ
+                          const s = String(value)
+                          const d = s.includes("T") ? parseISO(s) : dateFromYmdLocalMX(s)
+                          return d.toLocaleDateString("es-MX", {
+                            timeZone: MX_TZ,
+                            weekday: "short",
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })
                         }}
                         formatter={(val, name) => {
                           const n = Number(val)
@@ -379,7 +417,7 @@ export function ColaboradorDashboard({
                     }
                   />
 
-                  {/* Leyenda (parte inferior) */}
+                  {/* Leyenda */}
                   <ChartLegend content={<ChartLegendContent />} />
                   <Legend wrapperStyle={{ color: '#ffffffcc' }} />
 
@@ -467,5 +505,5 @@ export function ColaboradorDashboard({
         </div>
       </main>
     </div>
-  );
+  )
 }
