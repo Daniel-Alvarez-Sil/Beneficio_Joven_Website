@@ -94,8 +94,9 @@ class ReviewSolicitudNegocioAPIView(APIView):
                 tipo="colaborador"
             )
 
-        negocio = Negocio.objects.filter(id=solicitud.id_negocio.id).first()
+        negocio = Negocio.objects.filter(id=solicitud.id_negocio_id).first()
         negocio.estatus = 'activo' if estatus.lower() == "aprobado" else 'inactivo'
+        negocio.save()
 
         return Response({"message": "Solicitud revisada exitosamente."}, status=status.HTTP_200_OK)
 
