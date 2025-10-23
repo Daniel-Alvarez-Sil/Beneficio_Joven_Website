@@ -3,7 +3,7 @@ from rest_framework.generics import ListAPIView
 from ...models import SolicitudNegocio, Promocion, Canje, Negocio, AdministradorNegocio, Administrador, SolicitudNegocioDetalle, Cajero
 from login.models import User
 from .serializers import SolicitudNegocioSerializer, CajeroSerializer, NegocioFullSerializer, AdministradorNegocioFullSerializer
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 from rest_framework.views import APIView
@@ -14,6 +14,7 @@ from django.db.models import (
 from django.db.models import Q
 from django.db.models.functions import TruncDate
 from django.conf import settings
+from zoneinfo import ZoneInfo
 
 
 
@@ -60,6 +61,7 @@ class ReviewSolicitudNegocioAPIView(APIView):
         observaciones = data.get("observaciones", "")
 
         if not all([id_solicitud, id_administrador, estatus]):
+            print(data, id_administrador, user.username)
             print("Faltan campos obligatorios.")
             return Response({"error": "Faltan campos obligatorios."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -315,24 +317,37 @@ class NegociosResumenView(APIView):
 
         return Response(data)
 
+from datetime import datetime, time, timedelta
+from zoneinfo import ZoneInfo
+from django.db.models import Count, Q
+from django.db.models.functions import TruncDate
+from django.utils import timezone
+from rest_framework import permissions, status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 class detalleNegocioView(APIView):
-    permission_classes = [permissions.AllowAny]  # adjust as needed
+    permission_classes = [permissions.AllowAny]
 
     def get(self, request, *args, **kwargs):
         id_negocio = request.query_params.get("id_negocio")
         if not id_negocio:
-            try: 
-                user = request.user.username
-                AdministradorNegocio_obj = AdministradorNegocio.objects.filter(Q(correo__iexact=user) | Q(usuario__iexact=user)).first()
-                id_negocio = AdministradorNegocio_obj.id_negocio.id
-            except AdministradorNegocio.DoesNotExist:
-                return Response({"error": "AdministradorNegocio no encontrado."}, status=status.HTTP_404_NOT_FOUND)
-                # return Response({"error": "id_negocio es requerido."}, status=status.HTTP_400_BAD_REQUEST)
+            user = getattr(request.user, "username", None)
+            admin_neg = (
+                AdministradorNegocio.objects
+                .filter(Q(correo__iexact=user) | Q(usuario__iexact=user))
+                .first()
+            )
+            if not admin_neg:
+                return Response({"error": "AdministradorNegocio no encontrado."},
+                                status=status.HTTP_404_NOT_FOUND)
+            id_negocio = admin_neg.id_negocio_id
 
         try:
             negocio = Negocio.objects.get(id=id_negocio)
         except Negocio.DoesNotExist:
-            return Response({"error": "Negocio no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Negocio no encontrado."},
+                            status=status.HTTP_404_NOT_FOUND)
 
         admin = AdministradorNegocio.objects.filter(id_negocio=negocio).first()
 
@@ -341,38 +356,57 @@ class detalleNegocioView(APIView):
 
         num_promociones = Promocion.objects.filter(id_negocio=negocio, activo=True).count()
         num_canjes = Canje.objects.filter(id_promocion__id_negocio=negocio).count()
-        
-        today = timezone.now().date()
-        seven_days_ago = timezone.localtime(timezone.now()).date() - timedelta(days=6)  # includes today
 
-        # ✅ Get all promociones of the negocio
-        promociones = Promocion.objects.filter(id_negocio_id=id_negocio).values_list("nombre", flat=True)
+        # ---- Correct time handling (CDMX local days) ----
+        MX_TZ = ZoneInfo("America/Mexico_City")
 
-        # ✅ Query canjes in the last 7 days grouped by day and promoción
+        # Current local date in CDMX
+        now_local = timezone.now().astimezone(MX_TZ)
+        today_local = now_local.date()
+        start_date_local = today_local - timedelta(days=6)  # last 7 days including today
+
+        # Convert local day bounds to UTC for filtering
+        start_local_dt = datetime.combine(start_date_local, time.min, tzinfo=MX_TZ)   # 00:00 local
+        end_local_dt   = datetime.combine(today_local + timedelta(days=1), time.min, tzinfo=MX_TZ)  # next 00:00 local
+        start_utc = start_local_dt.astimezone(ZoneInfo("UTC"))
+        end_utc   = end_local_dt.astimezone(ZoneInfo("UTC"))
+
+        # All promociones (names) for matrix keys
+        promociones = list(
+            Promocion.objects
+            .filter(id_negocio_id=id_negocio)
+            .values_list("nombre", flat=True)
+        )
+
+        # Filter by UTC window, group by LOCAL (CDMX) calendar day
         canjes = (
             Canje.objects
             .filter(
                 id_promocion__id_negocio_id=id_negocio,
-                fecha_creado__date__range=(seven_days_ago, timezone.localtime(timezone.now()).date())
+                fecha_creado__gte=start_utc,
+                fecha_creado__lt=end_utc,
             )
-            .annotate(day=TruncDate("fecha_creado"))
+            .annotate(day=TruncDate("fecha_creado", tzinfo=MX_TZ))
             .values("day", "id_promocion__nombre")
             .annotate(total=Count("id"))
         )
 
-        # ✅ Build a dictionary with all days and initialize zeros
+        # Initialize all 7 local days to zero
         result = {}
         for i in range(7):
-            day = (seven_days_ago + timedelta(days=i)).strftime("%Y-%m-%d")
+            day = (start_date_local + timedelta(days=i)).strftime("%Y-%m-%d")
             result[day] = {promo: 0 for promo in promociones}
 
-        # ✅ Fill in actual totals
+        # Fill actual totals
         for entry in canjes:
-            day_str = entry["day"].strftime("%Y-%m-%d")
+            day_str = entry["day"].strftime("%Y-%m-%d")  # already in MX_TZ thanks to tzinfo
             promo_name = entry["id_promocion__nombre"]
-            total = entry["total"]
-            result[day_str][promo_name] = total
-
+            # Guard if promo renamed/deleted
+            if day_str not in result:
+                result[day_str] = {}
+            if promo_name not in result[day_str]:
+                result[day_str][promo_name] = 0
+            result[day_str][promo_name] = entry["total"]
 
         data = {
             "negocio": negocio_serializer.data,
@@ -381,7 +415,6 @@ class detalleNegocioView(APIView):
             "num_canjes": num_canjes,
             "canjes_ultimos_7_dias": result,
         }
-
         return Response(data)
 
 class ListAllCajerosView(APIView):

@@ -42,12 +42,12 @@ class validarQRView(APIView):
             if not promocion:
                 print("La promoción no pertenece a su negocio")
                 return Response({'success': False, 'message': 'La promoción no pertenece a su negocio'}, status=403)
-            if promocion.limite_total <= promocion.numero_canjeados:
-                return Response({'success': False, 'message': 'La promoción ha alcanzado su límite de canjes'}, status=403)
+            # if promocion.limite_total <= promocion.numero_canjeados:
+            #     return Response({'success': False, 'message': 'La promoción ha alcanzado su límite de canjes'}, status=403)
             
-            num_canjeado_usuario = Canje.objects.filter(id_promocion=promocion.id, id_usuario=codigo_qr.id_usuario.id).count()
-            if promocion.limite_por_usuario is not None and num_canjeado_usuario >= promocion.limite_por_usuario:
-                return Response({'success': False, 'message': 'El usuario ha alcanzado el límite de canjes para esta promoción'}, status=403)
+            # num_canjeado_usuario = Canje.objects.filter(id_promocion=promocion.id, id_usuario=codigo_qr.id_usuario.id).count()
+            # if promocion.limite_por_usuario is not None and num_canjeado_usuario >= promocion.limite_por_usuario:
+            #     return Response({'success': False, 'message': 'El usuario ha alcanzado el límite de canjes para esta promoción'}, status=403)
 
             codigo_qr.utilizado = True
             codigo_qr.save()
