@@ -2,8 +2,8 @@ from rest_framework import permissions, status
 from rest_framework.generics import ListAPIView
 from ...models import SolicitudNegocio, Promocion, Canje, Negocio, AdministradorNegocio, Administrador, SolicitudNegocioDetalle, Cajero
 from login.models import User
-from .serializers import SolicitudNegocioSerializer, CajeroSerializer
-from datetime import datetime
+from .serializers import SolicitudNegocioSerializer, CajeroSerializer, NegocioFullSerializer, AdministradorNegocioFullSerializer
+from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 from rest_framework.views import APIView
@@ -12,6 +12,9 @@ from django.db.models import (
     Count, FloatField, Subquery, OuterRef, F, Value, Case, When
 )
 from django.db.models import Q
+from django.db.models.functions import TruncDate
+from django.conf import settings
+
 
 
 class SolicitudNegocioListView(ListAPIView):
@@ -241,9 +244,6 @@ class EstadisticasHeaderView(APIView):
 
         return Response(combined_data, status=status.HTTP_200_OK)
 
-
-from django.conf import settings
-
 class NegociosResumenView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -315,6 +315,68 @@ class NegociosResumenView(APIView):
 
         return Response(data)
 
+class detalleNegocioView(APIView):
+    permission_classes = [permissions.AllowAny]  # adjust as needed
+
+    def get(self, request, *args, **kwargs):
+        id_negocio = request.query_params.get("id_negocio")
+        if not id_negocio:
+            return Response({"error": "id_negocio es requerido."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            negocio = Negocio.objects.get(id=id_negocio)
+        except Negocio.DoesNotExist:
+            return Response({"error": "Negocio no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+        admin = AdministradorNegocio.objects.filter(id_negocio=negocio).first()
+
+        negocio_serializer = NegocioFullSerializer(negocio)
+        admin_serializer = AdministradorNegocioFullSerializer(admin) if admin else None
+
+        num_promociones = Promocion.objects.filter(id_negocio=negocio, activo=True).count()
+        num_canjes = Canje.objects.filter(id_promocion__id_negocio=negocio).count()
+        
+        today = timezone.now().date()
+        seven_days_ago = timezone.localtime(timezone.now()).date() - timedelta(days=6)  # includes today
+
+        # ✅ Get all promociones of the negocio
+        promociones = Promocion.objects.filter(id_negocio_id=id_negocio).values_list("nombre", flat=True)
+
+        # ✅ Query canjes in the last 7 days grouped by day and promoción
+        canjes = (
+            Canje.objects
+            .filter(
+                id_promocion__id_negocio_id=id_negocio,
+                fecha_creado__date__range=(seven_days_ago, timezone.localtime(timezone.now()).date())
+            )
+            .annotate(day=TruncDate("fecha_creado"))
+            .values("day", "id_promocion__nombre")
+            .annotate(total=Count("id"))
+        )
+
+        # ✅ Build a dictionary with all days and initialize zeros
+        result = {}
+        for i in range(7):
+            day = (seven_days_ago + timedelta(days=i)).strftime("%Y-%m-%d")
+            result[day] = {promo: 0 for promo in promociones}
+
+        # ✅ Fill in actual totals
+        for entry in canjes:
+            day_str = entry["day"].strftime("%Y-%m-%d")
+            promo_name = entry["id_promocion__nombre"]
+            total = entry["total"]
+            result[day_str][promo_name] = total
+
+
+        data = {
+            "negocio": negocio_serializer.data,
+            "administrador_negocio": admin_serializer.data if admin_serializer else None,
+            "num_promociones": num_promociones,
+            "num_canjes": num_canjes,
+            "canjes_ultimos_7_dias": result,
+        }
+
+        return Response(data)
 
 class ListAllCajerosView(APIView):
     permission_classes = [permissions.AllowAny]  # adjust as needed
