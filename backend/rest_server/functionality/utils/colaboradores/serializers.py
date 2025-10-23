@@ -202,7 +202,7 @@ class PromocionCreateSerializer(serializers.ModelSerializer):
         attrs["descripcion"] = descripcion
 
         # Guardamos el tipo para usarlo en create()
-        if tipo in ['2x1', 'trae a un amigo', 'otro']:
+        if tipo in ['2x1', 'trae un amigo', 'otra']:
             attrs["_tipo"] = tipo
         elif porcentaje > 0:
             attrs["_tipo"] = "porcentaje"
