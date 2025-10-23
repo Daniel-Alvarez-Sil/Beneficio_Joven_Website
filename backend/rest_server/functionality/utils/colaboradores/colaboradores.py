@@ -41,7 +41,7 @@ class PromocionListView(APIView):
         try: 
             administradorNegocio = AdministradorNegocio.objects.get(usuario=username) 
         except AdministradorNegocio.DoesNotExist:
-            administradorNegocio = Cajero.objects.get(usuario=username)
+            administradorNegocio = Cajero.objects.get(Q(usuario=username) | Q(correo=username))
         if administradorNegocio:
             print(administradorNegocio.id_negocio)
         else:
