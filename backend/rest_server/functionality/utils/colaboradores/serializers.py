@@ -76,7 +76,7 @@ class AltaNegocioYAdminSerializer(serializers.Serializer):
         # 4) Crear solicitud de negocio pendiente
         solicitud = SolicitudNegocio.objects.create(
             id_negocio=negocio,
-            estatus="PENDIENTE"
+            estatus= "aprobado" if validated_data.get("creado_por_admin", True) else "pendiente"
         )
 
         # Hasta que se acepte su solicitud, el administrador no puede loguearse

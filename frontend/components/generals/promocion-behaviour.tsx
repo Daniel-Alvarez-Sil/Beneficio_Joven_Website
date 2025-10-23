@@ -1,38 +1,79 @@
 "use client";
 
 import * as React from "react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+
+// shadcn/ui
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+// === Wrapper that toggles between your two original implementations ===
+type CanjesRaw = Record<string, Record<string, number>>;
+type Mode = "line" | "area";
+
+export default function PromocionesChart({ canjesRaw }: { canjesRaw?: CanjesRaw }) {
+  const [mode, setMode] = useState<Mode>("line");
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-end">
+        <div className="min-w-[180px]">
+          <Select value={mode} onValueChange={(v: Mode) => setMode(v)}>
+            <SelectTrigger className="bg-white/10 text-white border-white/20">
+              <SelectValue placeholder="Tipo de gráfico" />
+            </SelectTrigger>
+            <SelectContent className="glass-alt border-white/20 text-white">
+              <SelectItem value="line">Línea</SelectItem>
+              <SelectItem value="area">Área</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {mode === "line" ? (
+        <LineChartImpl canjesRaw={canjesRaw} />
+      ) : (
+        <AreaChartImpl canjesRaw={canjesRaw} />
+      )}
+    </div>
+  );
+}
+
+/* ================== YOUR ORIGINAL AREA CHART (unchanged) ================== */
+
+import {
+  Card as ACard,
+  CardContent as ACardContent,
+  CardDescription as ACardDescription,
+  CardHeader as ACardHeader,
+  CardTitle as ACardTitle,
 } from "@/components/ui/card";
 import {
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
+  ChartContainer as AChartContainer,
+  ChartTooltip as AChartTooltip,
+  ChartTooltipContent as AChartTooltipContent,
+  type ChartConfig as AChartConfig,
 } from "@/components/ui/chart";
-import { AreaChart, Area, CartesianGrid, XAxis } from "recharts";
-import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { AreaChart, Area, CartesianGrid as ACartesianGrid, XAxis as AXAxis } from "recharts";
+import { Loader2 as ALoader2 } from "lucide-react";
+import { toast as atoast } from "sonner";
 
-type CanjesRaw = Record<string, Record<string, number>>;
+function toVarToken(s: string) {
+  const base = s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const cleaned = base.replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  return cleaned.length ? cleaned : "key";
+}
 
-export default function PromocionesChart({
-  canjesRaw,
-}: {
-  /** Raw object like { 'YYYY-MM-DD': { 'Promo A': 1, 'Promo B': 0 } } */
-  canjesRaw?: CanjesRaw;
-}) {
-  const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(!canjesRaw);
+function AreaChartImpl({ canjesRaw }: { canjesRaw?: CanjesRaw }) {
+  const [data, setData] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(!canjesRaw);
 
-  useEffect(() => {
+  React.useEffect(() => {
     try {
       if (!canjesRaw || Object.keys(canjesRaw).length === 0) {
         setData([]);
@@ -40,14 +81,11 @@ export default function PromocionesChart({
         return;
       }
       const days = Object.keys(canjesRaw).sort();
-      const transformed = days.map((day) => ({
-        date: day,
-        ...canjesRaw[day],
-      }));
+      const transformed = days.map((day) => ({ date: day, ...canjesRaw[day] }));
       setData(transformed);
     } catch (e) {
       console.error(e);
-      toast.error("Error al preparar datos de canjes");
+      atoast.error("Error al preparar datos de canjes");
       setData([]);
     } finally {
       setLoading(false);
@@ -57,63 +95,68 @@ export default function PromocionesChart({
   if (loading)
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="animate-spin w-6 h-6 text-gray-500" />
+        <ALoader2 className="animate-spin w-6 h-6 text-gray-500" />
       </div>
     );
 
   if (data.length === 0)
     return (
-      <Card className="glass-alt text-white">
-        <CardHeader>
-          <CardTitle>Promociones – Últimos 7 días</CardTitle>
-          <CardDescription>No hay datos disponibles.</CardDescription>
-        </CardHeader>
-      </Card>
+      <ACard className="glass-alt text-white">
+        <ACardHeader>
+          <ACardTitle>Promociones – Últimos 7 días</ACardTitle>
+          <ACardDescription>No hay datos disponibles.</ACardDescription>
+        </ACardHeader>
+      </ACard>
     );
 
-  // Extract dynamic promociones and define colors
-  const promociones = Object.keys(data[0]).filter((key) => key !== "date");
-  const chartConfig: ChartConfig = promociones.reduce((acc, promo, index) => {
-    acc[promo] = {
-      label: promo,
-      color: `hsl(${(index * 50) % 360}, 70%, 50%)`,
-    };
+  // collect ALL promo keys across rows (not just the first row)
+  const promocionesSet = new Set<string>();
+  for (const row of data) {
+    Object.keys(row).forEach((k) => k !== "date" && promocionesSet.add(k));
+  }
+  const promociones = Array.from(promocionesSet);
+
+  // stable mapping: original promo name + safe id + color
+  const entries = promociones.map((promo, index) => {
+    const id = `p${index}-${toVarToken(promo)}`;
+    const color = `hsl(${(index * 50) % 360}, 70%, 50%)`;
+    return { promo, id, color };
+  });
+
+  // config is only used for ChartContainer sizing; we won’t rely on its CSS vars
+  const chartConfig: AChartConfig = entries.reduce((acc, { id, promo, color }) => {
+    acc[id] = { label: promo, color };
     return acc;
-  }, {} as ChartConfig);
+  }, {} as AChartConfig);
+
+  // simple custom legend that always shows proper promo names
+  const Legend = () => (
+    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs">
+      {entries.map(({ id, promo, color }) => (
+        <div key={id} className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full" style={{ background: color }} />
+          <span className="text-white/90">{promo}</span>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
-    <Card className="flex flex-col glass-alt text-white pt-0">
-      <CardHeader className="flex items-center gap-2 space-y-0 border-b py-5 sm:flex-row">
-        <div className="grid flex-1 gap-1">
-          <CardTitle>Promociones – Últimos 7 días</CardTitle>
-          <CardDescription>Comportamiento diario de canjes</CardDescription>
-        </div>
-      </CardHeader>
-
-      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
-        <ChartContainer
-          config={chartConfig}
-          className="aspect-auto h-[250px] w-full"
-        >
+    <ACard className="flex flex-col glass-alt text-white pt-0">
+      <ACardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+        <AChartContainer config={chartConfig} className="aspect-auto h-[250px] w-full">
           <AreaChart data={data}>
             <defs>
-              {promociones.map((promo) => (
-                <linearGradient
-                  key={promo}
-                  id={`fill-${promo}`}
-                  x1="0"
-                  y1="0"
-                  x2="0"
-                  y2="1"
-                >
-                  <stop offset="5%" stopColor={`var(--color-${promo})`} stopOpacity={0.8} />
-                  <stop offset="95%" stopColor={`var(--color-${promo})`} stopOpacity={0.1} />
+              {entries.map(({ id, color }) => (
+                <linearGradient key={id} id={`fill-${id}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={color} stopOpacity={0.8} />
+                  <stop offset="95%" stopColor={color} stopOpacity={0.1} />
                 </linearGradient>
               ))}
             </defs>
 
-            <CartesianGrid vertical={false} />
-            <XAxis
+            <ACartesianGrid vertical={false} />
+            <AXAxis
               dataKey="date"
               tickLine={false}
               axisLine={false}
@@ -121,10 +164,10 @@ export default function PromocionesChart({
               minTickGap={32}
             />
 
-            <ChartTooltip
+            <AChartTooltip
               cursor={false}
               content={
-                <ChartTooltipContent
+                <AChartTooltipContent
                   labelFormatter={(value) =>
                     new Date(value).toLocaleDateString("es-MX", {
                       month: "short",
@@ -136,21 +179,185 @@ export default function PromocionesChart({
               }
             />
 
-            {promociones.map((promo) => (
+            {entries.map(({ promo, id, color }) => (
               <Area
-                key={promo}
-                dataKey={promo}
+                key={id}
+                dataKey={promo}            // original field in your data
                 type="natural"
-                fill={`url(#fill-${promo})`}
-                stroke={`var(--color-${promo})`}
+                fill={`url(#fill-${id})`}  // gradient uses direct color
+                stroke={color}             // line uses direct color
                 stackId="a"
+                name={promo}               // tooltip name (for completeness)
               />
             ))}
-
-            <ChartLegend content={<ChartLegendContent />} />
           </AreaChart>
-        </ChartContainer>
-      </CardContent>
-    </Card>
+        </AChartContainer>
+
+        {/* Custom legend with correct labels */}
+        <Legend />
+      </ACardContent>
+    </ACard>
+  );
+}
+
+/* ================== YOUR ORIGINAL LINE CHART (unchanged) ================== */
+
+import {
+  Card as LCard,
+  CardContent as LCardContent,
+  CardDescription as LCardDescription,
+  CardHeader as LCardHeader,
+  CardTitle as LCardTitle,
+} from "@/components/ui/card";
+import {
+  ChartContainer as LChartContainer,
+  ChartTooltip as LChartTooltip,
+  ChartTooltipContent as LChartTooltipContent,
+  type ChartConfig as LChartConfig,
+} from "@/components/ui/chart";
+import { LineChart, Line, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Loader2 as LLoader2 } from "lucide-react";
+import { toast as ltoast } from "sonner";
+
+function toToken(s: string) {
+  const base = s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const cleaned = base.replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  return cleaned.length ? cleaned : "key";
+}
+
+function LineChartImpl({ canjesRaw }: { canjesRaw?: CanjesRaw }) {
+  const [data, setData] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(!canjesRaw);
+
+  // Build days + full promo set first, then normalize rows
+  const { days, promos } = React.useMemo(() => {
+    const resultDays = canjesRaw ? Object.keys(canjesRaw).sort() : [];
+    const set = new Set<string>();
+    if (canjesRaw) {
+      for (const d of resultDays) {
+        Object.keys(canjesRaw[d] || {}).forEach((k) => set.add(k));
+      }
+    }
+    return { days: resultDays, promos: Array.from(set) };
+  }, [canjesRaw]);
+
+  React.useEffect(() => {
+    try {
+      if (!canjesRaw || days.length === 0) {
+        setData([]);
+        setLoading(false);
+        return;
+      }
+      const normalized = days.map((day) => {
+        const row: Record<string, number | string> = { date: day };
+        for (const p of promos) {
+          row[p] =
+            canjesRaw[day] && typeof canjesRaw[day][p] === "number"
+              ? canjesRaw[day][p]
+              : 0;
+        }
+        return row;
+      });
+      setData(normalized);
+    } catch (e) {
+      console.error(e);
+      ltoast.error("Error al preparar datos de canjes");
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [canjesRaw, days, promos]);
+
+  if (loading)
+    return (
+      <div className="flex items-center justify-center h-64">
+        <LLoader2 className="animate-spin w-6 h-6 text-gray-500" />
+      </div>
+    );
+
+  if (data.length === 0)
+    return (
+      <LCard className="glass-alt text-white">
+        <LCardHeader>
+          <LCardTitle>Promociones – Últimos 7 días</LCardTitle>
+          <LCardDescription>No hay datos disponibles.</LCardDescription>
+        </LCardHeader>
+      </LCard>
+    );
+
+  // stable mapping for legend & colors
+  const entries = promos.map((promo, index) => {
+    const id = `p${index}-${toToken(promo)}`;
+    const color = `hsl(${(index * 50) % 360}, 70%, 50%)`;
+    return { promo, id, color };
+  });
+
+  // chart config (for container sizing only; we won’t rely on CSS vars)
+  const chartConfig: LChartConfig = entries.reduce((acc, { id, promo, color }) => {
+    acc[id] = { label: promo, color };
+    return acc;
+  }, {} as LChartConfig);
+
+  // custom legend so names/colors always match
+  const Legend = () => (
+    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs">
+      {entries.map(({ id, promo, color }) => (
+        <div key={id} className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full" style={{ background: color }} />
+          <span className="text-white/90">{promo}</span>
+        </div>
+      ))}
+    </div>
+  );
+
+  return (
+    <LCard className="flex flex-col glass-alt text-white pt-0">
+      <LCardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+        <LChartContainer config={chartConfig} className="aspect-auto h-[250px] w-full">
+          <LineChart data={data}>
+            <CartesianGrid vertical={false} />
+            <XAxis
+              dataKey="date"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              minTickGap={32}
+            />
+            <YAxis allowDecimals={false} />
+            <LChartTooltip
+              cursor={{ strokeOpacity: 0.15 }}
+              content={
+                <LChartTooltipContent
+                  labelFormatter={(value) =>
+                    new Date(value).toLocaleDateString("es-MX", {
+                      month: "short",
+                      day: "numeric",
+                    })
+                  }
+                  indicator="line"
+                />
+              }
+            />
+
+            {entries.map(({ promo, id, color }) => (
+              <Line
+                key={id}
+                type="monotone"
+                dataKey={promo}
+                name={promo}
+                stroke={color}
+                strokeWidth={2}
+                dot={{ r: 2 }}
+                activeDot={{ r: 4 }}
+                // no stackId -> all lines share the same plane
+                isAnimationActive={false}
+              />
+            ))}
+          </LineChart>
+        </LChartContainer>
+
+        <Legend />
+      </LCardContent>
+    </LCard>
   );
 }

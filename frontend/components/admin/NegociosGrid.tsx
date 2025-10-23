@@ -89,7 +89,7 @@ interface NegocioDetalleResponse {
 }
 
 /* =========================================================
-   Detail dialog (composition only)
+   Detail dialog (two glass cards: negocio + administrador)
 ========================================================= */
 
 function NegocioDetalleDialog({
@@ -109,8 +109,7 @@ function NegocioDetalleDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogOverlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
-      <DialogContent className="sm:max-w-4xl glass-alt text-white border-white/20 p-0">
-        {/* Constrain height & make scrollable to prevent overflow */}
+      <DialogContent className="sm:max-w-5xl glass-alt text-white border-white/20 p-0">
         <div className="max-h-[85vh] flex flex-col">
           <DialogHeader className="px-6 pt-5 pb-3 border-b border-white/10">
             <DialogTitle className="text-white">Detalle del negocio</DialogTitle>
@@ -125,153 +124,184 @@ function NegocioDetalleDialog({
               <p className="text-sm text-white/70">No se pudo cargar el detalle.</p>
             ) : (
               <div className="space-y-6">
-                {/* Summary card */}
+                {/* Header strip with logo, name, estatus & KPIs */}
                 <Card className="bg-white/5 border-white/10">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2">
-                      {n?.logo ? (
-                        <img
-                          src={n.logo}
-                          alt={n.nombre}
-                          className="h-8 w-8 object-contain rounded"
-                        />
-                      ) : (
-                        <div className="h-8 w-8 rounded bg-white/10 flex items-center justify-center text-xs">
-                          N
-                        </div>
-                      )}
-                      <span className="truncate">{n?.nombre ?? "Negocio"}</span>
-                      <Badge
-                        variant={
-                          n?.estatus?.toLowerCase() === "activo"
-                            ? "default"
-                            : "secondary"
-                        }
-                      >
-                        {n?.estatus ?? "—"}
-                      </Badge>
-                    </CardTitle>
-                    <CardDescription className="text-white/70">
-                      Resumen e información principal del negocio y su administrador.
-                    </CardDescription>
-                  </CardHeader>
-
-                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* KPIs */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-white/80">Promociones</span>
-                        <span className="font-semibold">
-                          {detalle.num_promociones}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-white/80">Canjes</span>
-                        <span className="font-semibold">{detalle.num_canjes}</span>
-                      </div>
-                    </div>
-
-                    {/* Contact & links */}
-                    <div className="space-y-2">
-                      <div className="text-sm">
-                        <span className="text-white/60">Correo: </span>
-                        <span className="text-white/90">{n?.correo}</span>
-                      </div>
-                      <div className="text-sm">
-                        <span className="text-white/60">Teléfono: </span>
-                        <span className="text-white/90">{n?.telefono}</span>
-                      </div>
-                      <div className="text-sm">
-                        <span className="text-white/60">Sitio web: </span>
-                        {n?.sitio_web ? (
-                          <a
-                            href={n.sitio_web}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="underline inline-flex items-center gap-1"
-                          >
-                            {n.sitio_web} <ExternalLink className="h-3 w-3" />
-                          </a>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {n?.logo ? (
+                          <img
+                            src={n.logo}
+                            alt={n.nombre}
+                            className="h-10 w-10 object-contain rounded"
+                          />
                         ) : (
-                          <span className="text-white/50">—</span>
+                          <div className="h-10 w-10 rounded bg-white/10 flex items-center justify-center text-xs">
+                            N
+                          </div>
                         )}
-                      </div>
-                      <div className="text-sm">
-                        <span className="text-white/60">Maps: </span>
-                        {n?.url_maps ? (
-                          <a
-                            href={n.url_maps}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="underline inline-flex items-center gap-1"
-                          >
-                            Abrir ubicación <ExternalLink className="h-3 w-3" />
-                          </a>
-                        ) : (
-                          <span className="text-white/50">—</span>
-                        )}
-                      </div>
-                      <div className="text-xs text-white/60 mt-1">
-                        Creado:{" "}
-                        {n?.fecha_creado
-                          ? new Date(n.fecha_creado).toLocaleString("es-MX")
-                          : "—"}
-                      </div>
-                    </div>
-
-                    {/* Address full width */}
-                    <div className="md:col-span-2 text-sm">
-                      <span className="text-white/60">Dirección:</span>{" "}
-                      <span className="text-white/90">
-                        {[n?.colonia, n?.municipio, n?.estado]
-                          .filter(Boolean)
-                          .join(", ")}
-                        {n?.cp ? `, CP ${n.cp}` : ""}
-                        {(n?.numero_ext || n?.numero_int)
-                          ? ` · No. ${n?.numero_ext ?? ""}${
-                              n?.numero_int ? ` Int. ${n.numero_int}` : ""
-                            }`
-                          : ""}
-                      </span>
-                    </div>
-
-                    {/* Admin info */}
-                    <div className="md:col-span-2">
-                      <div className="text-white/80 font-medium mb-2">
-                        Administrador del negocio
-                      </div>
-                      {a ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                          <div>
-                            <span className="text-white/60">Nombre: </span>
-                            {[a.nombre, a.apellido_paterno, a.apellido_materno]
-                              .filter(Boolean)
-                              .join(" ")}
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-xl font-semibold truncate max-w-[52vw] text-white">
+                              {n?.nombre ?? "Negocio"}
+                            </h3>
+                            <Badge
+                              variant={
+                                n?.estatus?.toLowerCase() === "activo"
+                                  ? "default"
+                                  : "secondary"
+                              }
+                            >
+                              {n?.estatus ?? "—"}
+                            </Badge>
                           </div>
-                          <div>
-                            <span className="text-white/60">Usuario: </span>
-                            {a.usuario}
-                          </div>
-                          <div>
-                            <span className="text-white/60">Correo: </span>
-                            {a.correo}
-                          </div>
-                          <div>
-                            <span className="text-white/60">Teléfono: </span>
-                            {a.telefono ?? "—"}
-                          </div>
+                          <CardDescription className="text-white/70">
+                            Información general, contacto y administración.
+                          </CardDescription>
                         </div>
-                      ) : (
-                        <div className="text-sm text-white/60">
-                          Sin administrador registrado.
+                      </div>
+
+                      {/* KPIs */}
+                      <div className="grid grid-cols-2 gap-3 shrink-0">
+                        <div className="rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-center">
+                          <div className="text-xs text-white">Promociones</div>
+                          <div className="text-xl font-semibold text-white">{detalle.num_promociones}</div>
                         </div>
-                      )}
+                        <div className="rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-center">
+                          <div className="text-xs text-white">Canjes</div>
+                          <div className="text-xl font-semibold text-white">{detalle.num_canjes}</div>
+                        </div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Chart card fed with pre-fetched raw */}
-                <PromocionesChart canjesRaw={detalle.canjes_ultimos_7_dias} />
+                {/* Two-column glass layout: Negocio (basic) | Administrador */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Card 1: Información del negocio (basic info) */}
+                  <Card className="bg-white/5 border-white/10 backdrop-blur-md rounded-2xl">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-white">Información del negocio</CardTitle>
+                      <CardDescription className="text-white/70">
+                        Datos básicos, contacto, dirección y enlaces.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="text-sm">
+                          <span className="text-white/60">Correo: </span>
+                          <span className="text-white/90 break-all">{n?.correo || "—"}</span>
+                        </div>
+                        <div className="text-sm">
+                          <span className="text-white/60">Teléfono: </span>
+                          <span className="text-white/90">{n?.telefono || "—"}</span>
+                        </div>
+                        <div className="text-sm">
+                          <span className="text-white/60">RFC: </span>
+                          <span className="text-white/90">{n?.rfc || "—"}</span>
+                        </div>
+                        <div className="text-sm">
+                          <span className="text-white/60">Creado: </span>
+                          <span className="text-white/90">
+                            {n?.fecha_creado ? new Date(n.fecha_creado).toLocaleString("es-MX") : "—"}
+                          </span>
+                        </div>
+                        <div className="text-sm sm:col-span-2">
+                          <span className="text-white/60">Sitio web: </span>
+                          {n?.sitio_web ? (
+                            <a
+                              href={n.sitio_web}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="underline inline-flex items-center gap-1 break-all text-white"
+                            >
+                              {n.sitio_web} <ExternalLink className="h-3 w-3" />
+                            </a>
+                          ) : (
+                            <span className="text-white/50">—</span>
+                          )}
+                        </div>
+                        <div className="text-sm sm:col-span-2">
+                          <span className="text-white/60">Maps: </span>
+                          {n?.url_maps ? (
+                            <a
+                              href={n.url_maps}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="underline inline-flex items-center gap-1 break-all text-white"
+                            >
+                              Abrir ubicación <ExternalLink className="h-3 w-3" />
+                            </a>
+                          ) : (
+                            <span className="text-white/50">—</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="h-px bg-white/10" />
+
+                      <div className="text-sm leading-6">
+                        <div className="text-white/60">Dirección</div>
+                        <div className="text-white/90">
+                          {[n?.colonia, n?.municipio, n?.estado].filter(Boolean).join(", ")}
+                          {n?.cp ? `, CP ${n.cp}` : ""}
+                          {(n?.numero_ext || n?.numero_int)
+                            ? ` · No. ${n?.numero_ext ?? ""}${n?.numero_int ? ` Int. ${n.numero_int}` : ""}`
+                            : ""}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Card 2: Administrador del negocio */}
+                  <Card className="bg-white/5 border-white/10 backdrop-blur-md rounded-2xl">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-white">Administrador del negocio</CardTitle>
+                      <CardDescription className="text-white/70">
+                        Persona responsable y datos de acceso.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {a ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-1 gap-3 text-sm w-full items-center">
+                          <div className="col-span-1 sm:col-span-1">
+                            <span className="text-white/60">Nombre: </span>
+                            <span className="text-white/90">
+                              {[a.nombre, a.apellido_paterno, a.apellido_materno].filter(Boolean).join(" ")}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-white/60">Usuario: </span>
+                            <span className="text-white/90">{a.usuario}</span>
+                          </div>
+                          <div>
+                            <span className="text-white/60">Correo: </span>
+                            <span className="text-white/90 break-all">{a.correo}</span>
+                          </div>
+                          <div>
+                            <span className="text-white/60">Teléfono: </span>
+                            <span className="text-white/90">{a.telefono ?? "—"}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-white/60">Sin administrador registrado.</div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Chart card (remains separate) */}
+                <Card className="bg-white/5 border-white/10 backdrop-blur-md rounded-2xl">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-white">Gráfica de distribución</CardTitle>
+                    <CardDescription className="text-white/70">
+                      Distribución por promoción (datos del servicio).
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-2">
+                    <PromocionesChart canjesRaw={detalle.canjes_ultimos_7_dias} />
+                  </CardContent>
+                </Card>
               </div>
             )}
           </div>
@@ -861,7 +891,7 @@ export default function NegociosGrid() {
                 return (
                   <Card
                     key={n.id}
-                    className="hover:shadow-md transition-shadow bg-white/5 border-white/10 rounded-xl overflow-hidden pt-0"
+                    className="hover:shadow-md transition-shadow bg-white/5 border-white/10 rounded-2xl overflow-hidden pt-0 backdrop-blur-md"
                   >
                     {n.logo ? (
                       <div className="w-full h-36 bg-black/20 flex items-center justify-center">
@@ -879,11 +909,11 @@ export default function NegociosGrid() {
 
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
                           <Avatar className="bg-white/10 text-white">
                             <AvatarFallback>{first}</AvatarFallback>
                           </Avatar>
-                          <div>
+                          <div className="min-w-0">
                             <h3 className="font-semibold text-white truncate max-w-[180px]">
                               {n.nombre}
                             </h3>

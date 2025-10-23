@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardOverview } from "@/components/admin/DashboardOverview";
-import { NegociosGrid } from "@/components/admin/NegociosGrid";
+import NegociosGrid  from "@/components/admin/NegociosGrid";
 import { SolicitudesList } from "@/components/admin/SolicitudesList";
 import { AdminHeader } from "./AdminHeader";
 
