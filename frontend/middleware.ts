@@ -29,6 +29,19 @@ export default async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/registro', req.nextUrl))
   }
  
+  // 4.1 Redirect to /register or /administrador or /colaborador if route is '/'
+  if (path === '/') {
+    if (!session?.accessToken) {
+      return NextResponse.redirect(new URL('/registro', req.nextUrl))
+    } else {
+      const role = await verifyRole()
+      if (role?.role === 'colaborador') {
+        return NextResponse.redirect(new URL('/colaborador', req.nextUrl))
+      }
+      return NextResponse.redirect(new URL('/administrador', req.nextUrl))
+    }
+  }
+
   // 5. Redirect to /dashboard if the user is authenticated
   if (
     isPublicRoute &&
