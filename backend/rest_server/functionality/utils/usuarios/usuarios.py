@@ -141,7 +141,7 @@ class ApartarPromocionView(APIView):
         id_promocion = request.data.get('id_promocion')
         id_usuario = Usuario.objects.get(correo=username).id
         try:
-            apartado_existente = Apartado.objects.filter(id_usuario_id=id_usuario, id_promocion_id=id_promocion).first()
+            apartado_existente = Apartado.objects.get(id_usuario_id=id_usuario, id_promocion_id=id_promocion)
             apartado_existente.delete()
             return Response({'message': 'Promoción removida de apartados exitosamente.'}, status=201)
         except Apartado.DoesNotExist:

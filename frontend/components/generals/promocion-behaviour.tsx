@@ -18,9 +18,16 @@ export default function PromocionesChart({ id_negocio }: PromocionesChartProps) 
     async function fetchData() {
       try {
         const response = await getNegocioDetalle(id_negocio);
-        if (!response || !response.canjes_ultimos_7_dias) return;
+        console.log("Negocio detalle obtenido:", response);
 
-        const raw = response.canjes_ultimos_7_dias;
+        const raw = response?.canjes_ultimos_7_dias;
+        if (!raw || Object.keys(raw).length === 0) {
+          console.warn("No hay datos de canjes en los últimos 7 días");
+          setData([]);
+          return;
+        }
+
+        // ✅ Transform to Recharts-compatible format
         const days = Object.keys(raw).sort(); // chronological order
         const transformed = days.map((day) => ({
           date: day,
@@ -44,7 +51,6 @@ export default function PromocionesChart({ id_negocio }: PromocionesChartProps) 
       </div>
     );
 
-  // Extract all unique promocion names from the first object
   const promociones = data.length > 0 ? Object.keys(data[0]).filter((k) => k !== "date") : [];
 
   return (
@@ -64,7 +70,12 @@ export default function PromocionesChart({ id_negocio }: PromocionesChartProps) 
               <Tooltip />
               <Legend />
               {promociones.map((promo, index) => (
-                <Bar key={promo} dataKey={promo} stackId="a" fill={`hsl(${(index * 60) % 360}, 70%, 50%)`} />
+                <Bar
+                  key={promo}
+                  dataKey={promo}
+                  fill={`hsl(${(index * 50) % 360}, 70%, 50%)`}
+                  radius={[4, 4, 0, 0]}
+                />
               ))}
             </BarChart>
           </ResponsiveContainer>
