@@ -9,6 +9,7 @@ from decimal import Decimal
 from typing import Optional, Tuple
 from django.core.exceptions import MultipleObjectsReturned
 from functionality.utils.ai.automata import infer_promocion_fields
+from django.db.models import Q
 
 
 class NegocioCreateSerializer(serializers.ModelSerializer):
@@ -252,7 +253,7 @@ class PromocionCreateSerializer(serializers.ModelSerializer):
         try:
             administradorNegocio = AdministradorNegocio.objects.get(usuario=username)
         except AdministradorNegocio.DoesNotExist:
-            administradorNegocio = Cajero.objects.get(usuario=username)
+            administradorNegocio = Cajero.objects.get(Q(usuario=username)| Q(correo=username))
             # raise serializers.ValidationError({"id_negocio": "AdministradorNegocio no encontrado para el usuario."})
         except MultipleObjectsReturned:
             # Si existieran varios, tomamos el primero determinísticamente
