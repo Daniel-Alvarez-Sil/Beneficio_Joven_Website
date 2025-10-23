@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ...models import CodigoQR, Negocio, Promocion, Categoria, Usuario
+from ...models import CodigoQR, Negocio, Promocion, Categoria, Usuario, Apartado
 
 class NegocioSerializer(serializers.ModelSerializer):
     class Meta:
@@ -30,6 +30,18 @@ class PromocionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Promocion
         fields = '__all__'
+
+    def to_representation(self, instance):
+        request = self.context["request"]
+        id_promocion = getattr(instance, 'id')
+        username = request.user.username
+        usuario = Usuario.objects.filter(correo=username).first()
+        apartado_num = Apartado.objects.filter(id_usuario=usuario.id, id_promocion=id_promocion).count()
+        return {
+            **super().to_representation(instance),
+            "es_apartado": True if apartado_num > 0 else False
+        }
+
 
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:

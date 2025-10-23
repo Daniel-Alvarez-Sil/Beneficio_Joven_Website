@@ -11,7 +11,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import PromocionesChart  from "@/components/generals/promocion-behaviour";
+import PromocionesChart from "@/components/generals/promocion-behaviour";
 
 interface HeaderStats {
   promociones_por_negocio_ultimo_mes: Record<string, number>;

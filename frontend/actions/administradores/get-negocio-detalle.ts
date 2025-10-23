@@ -17,5 +17,6 @@ export async function getNegocioDetalle(id_negocio: number) {
     throw new Error("Error fetching negocio detalle");
   }
 
-  return (result as any).data;
+  console.log("Negocio detalle result:", result);
+  return result;
 }

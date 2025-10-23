@@ -56,7 +56,7 @@ class ListPromocionesView(APIView):
             filters &= Q(id_categoria_titulo=categoria)
 
         promociones = Promocion.objects.all()
-        serializer = PromocionSerializer(promociones, many=True)
+        serializer = PromocionSerializer(promociones, many=True, context={'request': request})
         print(serializer.data)
         return Response(serializer.data, status=200)
 
