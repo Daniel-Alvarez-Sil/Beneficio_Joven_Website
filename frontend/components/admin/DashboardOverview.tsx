@@ -11,6 +11,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
+import PromocionesChart  from "@/components/generals/promocion-behaviour";
 
 interface HeaderStats {
   promociones_por_negocio_ultimo_mes: Record<string, number>;
@@ -165,6 +166,7 @@ export function DashboardOverview() {
         dataObj={headerStats?.promociones_activas_por_negocio}
         centerLabel="Total"
       />
+      <PromocionesChart id_negocio={4} />
     </div>
   );
 }

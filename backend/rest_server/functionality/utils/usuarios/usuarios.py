@@ -137,19 +137,25 @@ class ApartarPromocionView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        id_usuario = request.user.id
+        username = request.user.username
         id_promocion = request.data.get('id_promocion')
+        id_usuario = Usuario.objects.get(correo=username).id
         try:
-            apartado = Apartado.objects.create(
+            apartado_existente = Apartado.objects.filter(id_usuario_id=id_usuario, id_promocion_id=id_promocion).first()
+            apartado_existente.delete()
+            return Response({'message': 'Promoción removida de apartados exitosamente.'}, status=201)
+        except Apartado.DoesNotExist:
+            try:
+                apartado = Apartado.objects.create(
                 id_usuario_id=id_usuario,
                 id_promocion_id=id_promocion,
                 fecha_creado=timezone.now(),
                 fecha_vigencia=None,
                 estatus='sin canjear'
             )
-            return Response({'message': 'Promoción apartada exitosamente.', 'id_apartado': apartado.id}, status=201)
-        except Exception as e:
-            return Response({'detail': 'Error al apartar la promoción.'}, status=400)
+                return Response({'message': 'Promoción apartada exitosamente.', 'id_apartado': apartado.id}, status=201)
+            except Apartado.DoesNotExist:
+                return Response({'detail': 'Error al apartar la promoción.'}, status=400)
         
 class ListPromocionesApartadasView(APIView):
     permission_classes = [IsAuthenticated]
