@@ -38,7 +38,10 @@ class PromocionListView(APIView):
         # Accept id from query string (preferred) or JSON body (fallback)
         id_administrador_negocio = request.user.id if request.user and request.user.is_authenticated else None
         username = User.objects.get(id=id_administrador_negocio).username if id_administrador_negocio else None
-        administradorNegocio = AdministradorNegocio.objects.get(usuario=username) 
+        try: 
+            administradorNegocio = AdministradorNegocio.objects.get(usuario=username) 
+        except AdministradorNegocio.DoesNotExist:
+            administradorNegocio = Cajero.objects.get(usuario=username)
         if administradorNegocio:
             print(administradorNegocio.id_negocio)
         else:

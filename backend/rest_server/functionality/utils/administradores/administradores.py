@@ -321,7 +321,13 @@ class detalleNegocioView(APIView):
     def get(self, request, *args, **kwargs):
         id_negocio = request.query_params.get("id_negocio")
         if not id_negocio:
-            return Response({"error": "id_negocio es requerido."}, status=status.HTTP_400_BAD_REQUEST)
+            try: 
+                user = request.user.username
+                AdministradorNegocio_obj = AdministradorNegocio.objects.filter(Q(correo__iexact=user) | Q(usuario__iexact=user)).first()
+                id_negocio = AdministradorNegocio_obj.id_negocio.id
+            except AdministradorNegocio.DoesNotExist:
+                return Response({"error": "AdministradorNegocio no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+                # return Response({"error": "id_negocio es requerido."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             negocio = Negocio.objects.get(id=id_negocio)

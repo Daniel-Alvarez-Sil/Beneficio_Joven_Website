@@ -223,17 +223,18 @@ class PromocionCreateSerializer(serializers.ModelSerializer):
             except Negocio.DoesNotExist:
                 raise serializers.ValidationError({"id_negocio": "Negocio no encontrado."})
 
-            admin = (
-                AdministradorNegocio.objects
-                .filter(id_negocio=negocio)
-                .order_by("id")
-                .first()
-            )
-            if not admin:
-                raise serializers.ValidationError(
-                    "No existe AdministradorNegocio asociado a este id_negocio."
-                )
-            return negocio, admin
+            # admin = (
+            #     AdministradorNegocio.objects
+            #     .filter(id_negocio=negocio)
+            #     .order_by("id")
+            #     .first()
+            # )
+            # if not admin:
+            #     raise serializers.ValidationError(
+            #         "No existe AdministradorNegocio asociado a este id_negocio."
+            #     )
+            # return negocio, admin
+            return negocio
 
         # 🔐 Inferir desde el usuario autenticado
         request = self.context.get("request")
@@ -251,7 +252,8 @@ class PromocionCreateSerializer(serializers.ModelSerializer):
         try:
             administradorNegocio = AdministradorNegocio.objects.get(usuario=username)
         except AdministradorNegocio.DoesNotExist:
-            raise serializers.ValidationError({"id_negocio": "AdministradorNegocio no encontrado para el usuario."})
+            administradorNegocio = Cajero.objects.get(usuario=username)
+            # raise serializers.ValidationError({"id_negocio": "AdministradorNegocio no encontrado para el usuario."})
         except MultipleObjectsReturned:
             # Si existieran varios, tomamos el primero determinísticamente
             administradorNegocio = (
@@ -265,7 +267,8 @@ class PromocionCreateSerializer(serializers.ModelSerializer):
             except Negocio.DoesNotExist:
                 raise serializers.ValidationError({"id_negocio": "Negocio no encontrado para el usuario."})
 
-        return negocio, administradorNegocio
+        return negocio
+        # return negocio, administradorNegocio
 
     def create(self, validated_data):
         from django.db import transaction
@@ -276,7 +279,8 @@ class PromocionCreateSerializer(serializers.ModelSerializer):
         id_negocio_pk = validated_data.pop("id_negocio", None)
 
         # Resuelve Negocio e id_administrador_negocio según las reglas
-        negocio, admin = self._resolve_negocio_y_admin(id_negocio_pk)
+        # negocio, admin = self._resolve_negocio_y_admin(id_negocio_pk)
+        negocio = self._resolve_negocio_y_admin(id_negocio_pk)
 
         # Tipo calculado en validate()
         tipo = validated_data.pop("_tipo")
@@ -286,7 +290,7 @@ class PromocionCreateSerializer(serializers.ModelSerializer):
         with transaction.atomic():
             promocion = Promocion.objects.create(
                 id_negocio=negocio,
-                id_administrador_negocio=admin,
+                # id_administrador_negocio=admin,
                 tipo=tipo,
                 **validated_data,
             )
