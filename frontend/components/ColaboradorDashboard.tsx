@@ -1,11 +1,9 @@
 "use client"
 
 import { useEffect, useMemo, useState, useCallback } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { LogOut, Loader2, RefreshCw, TrendingUp } from "lucide-react"
-import { logout } from "@/actions/login/auth"
-import { Legend } from "recharts"
+import { Car, Loader2, RefreshCw, TrendingUp } from "lucide-react"
 
 import {
   ChartContainer,
@@ -24,20 +22,22 @@ import {
   AreaChart,
   Area,
   LabelList,
+  Legend,
 } from "recharts"
+
 import { getEstadisticas, type EstadisticasResponse } from "@/actions/colaboradores/get-estadisticas"
+import { getNegocioDetalle } from "@/actions/colaboradores/get-negocio-detalle"
+import PromocionesChart from "@/components/generals/promocion-behaviour"
 
 /* =========================
    Zona horaria fija (UTC-6)
    ========================= */
 const MX_TZ = "America/Mexico_City"
 
-// Para ISO completos (con Z o +hh:mm), `new Date(iso)` es suficiente.
 function parseISO(iso: string): Date {
   return new Date(iso)
 }
 
-// Construye YYYY-MM-DD **en MX_TZ** para agrupar por día local.
 function ymdInTZ(d: Date, tz = MX_TZ): string {
   const parts = new Intl.DateTimeFormat("es-MX", {
     timeZone: tz,
@@ -45,24 +45,19 @@ function ymdInTZ(d: Date, tz = MX_TZ): string {
     month: "2-digit",
     day: "2-digit",
   }).formatToParts(d)
-
   const y = parts.find(p => p.type === "year")!.value
   const m = parts.find(p => p.type === "month")!.value
   const dd = parts.find(p => p.type === "day")!.value
-  return `${y}-${m}-${dd}` // YYYY-MM-DD local MX
+  return `${y}-${m}-${dd}`
 }
 
-// Cuando tenemos **claves de día** "YYYY-MM-DD" (ya en MX local),
-// creamos un Date seguro en **mediodía UTC** para evitar rollback de día al formatear.
 function dateFromYmdLocalMX(ymd: string): Date {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd)
   if (!m) return new Date(NaN)
   const [_, Y, M, D] = m
-  // 12:00 UTC = 06:00 MX aprox, sigue siendo el mismo día calendario en MX
   return new Date(Date.UTC(Number(Y), Number(M) - 1, Number(D), 12, 0, 0))
 }
 
-// Formateador corto que acepta ISO completo o YYYY-MM-DD (clave local MX)
 const fmtDateShortMX = (s: string) => {
   const d = s.includes("T") ? parseISO(s) : dateFromYmdLocalMX(s)
   if (Number.isNaN(d.getTime())) return s
@@ -78,14 +73,85 @@ interface ColaboradorDashboardProps {
   idNegocio?: string
 }
 
+type CanjesRaw = Record<string, Record<string, number>>
+
 /* =========================
-   Utilidades locales
+   Helpers
    ========================= */
 const fmtNumber = (n: number) =>
   new Intl.NumberFormat("es-MX", { maximumFractionDigits: 0 }).format(n)
 
 const fmtCurrency = (n: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(n)
+
+/**
+ * Normaliza el payload a:
+ * { "YYYY-MM-DD": { "Promo A": 10, "Promo B": 5 } }
+ *
+ * Soporta:
+ *  - payload.canjes_ultimos_7_dias (tu ejemplo)
+ *  - payload.canjes_por_dia
+ *  - payload.canjes_ultimos_7_dias_por_promocion
+ *  - payload.canjes_ultimos_siete_dias_por_promocion
+ *  - arreglos de eventos: [{fecha_hora, titulo|promocion|nombre, ...}, ...]
+ *  - objetos con claves ISO: { "2025-10-17T...Z": ["Descuento 10%", 123.45] }
+ */
+function toCanjesRawFromNegocioDetalle(payload: any): CanjesRaw {
+  const out: CanjesRaw = {}
+
+  // 🔧 Formatos tipo mapa (día -> { promo -> count })
+  const mapCandidate =
+    payload?.canjes_ultimos_7_dias ?? // <— FALTABA ESTA CLAVE
+    payload?.canjes_por_dia ??
+    payload?.canjes_ultimos_7_dias_por_promocion ??
+    payload?.canjes_ultimos_siete_dias_por_promocion
+
+  if (mapCandidate && typeof mapCandidate === "object" && !Array.isArray(mapCandidate)) {
+    for (const [dayKey, promos] of Object.entries<any>(mapCandidate)) {
+      const day = String(dayKey)
+      if (!out[day]) out[day] = {}
+      for (const [promoName, count] of Object.entries<any>(promos ?? {})) {
+        const name = String(promoName)
+        out[day][name] = Number(count ?? 0)
+      }
+    }
+    return out
+  }
+
+  // 🔧 Lista de canjes (cada evento suma 1 a la promo del día)
+  const arr =
+    payload?.canjes_ultimos_7_dias_lista ??
+    payload?.historico_de_canjes_ultimos_siete_dias ??
+    payload?.canjes_ultimos_7_dias_array ??
+    []
+
+  if (Array.isArray(arr) && arr.length > 0) {
+    for (const item of arr) {
+      if (item && typeof item === "object" && "fecha_hora" in item) {
+        const d = parseISO(String(item.fecha_hora))
+        if (Number.isNaN(d.getTime())) continue
+        const day = ymdInTZ(d)
+        const title = String(item.titulo ?? item.promocion ?? item.nombre ?? "Promoción")
+        if (!out[day]) out[day] = {}
+        out[day][title] = (out[day][title] ?? 0) + 1
+        continue
+      }
+      // Alterno: { "ISO": ["Titulo", monto] }
+      if (item && typeof item === "object") {
+        for (const [maybeIso, tuple] of Object.entries(item)) {
+          const d = parseISO(maybeIso)
+          if (Number.isNaN(d.getTime())) continue
+          const day = ymdInTZ(d)
+          const title = Array.isArray(tuple) ? String(tuple[0] ?? "Promoción") : "Promoción"
+          if (!out[day]) out[day] = {}
+          out[day][title] = (out[day][title] ?? 0) + 1
+        }
+      }
+    }
+  }
+
+  return out
+}
 
 export function ColaboradorDashboard({
   onLogout,
@@ -96,11 +162,16 @@ export function ColaboradorDashboard({
   const [error, setError] = useState<string | null>(null)
   const [stats, setStats] = useState<EstadisticasResponse | null>(null)
 
+  // ▲ Estado para el gráfico superior
+  const [detalleLoading, setDetalleLoading] = useState<boolean>(true)
+  const [canjesRaw, setCanjesRaw] = useState<CanjesRaw>({})
+  const [detalleDebug, setDetalleDebug] = useState<any>(null) // útil si quieres inspeccionar
+
   const fetchData = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
-      const data = await getEstadisticas(/* puedes pasar idNegocio si tu acción lo requiere */)
+      const data = await getEstadisticas()
       setStats(data)
     } catch (e: any) {
       console.error(e)
@@ -110,12 +181,33 @@ export function ColaboradorDashboard({
     }
   }, [idNegocio])
 
+  const fetchNegocioDetalle = useCallback(async () => {
+    try {
+      setDetalleLoading(true)
+      const result: any = await getNegocioDetalle(idNegocio as any) // soporta ambos: con o sin id
+      // Axios: { data: ... }, fetch-wrapper: puede ser el payload directo
+      const payload = result?.data ?? result
+      console.log("[DEBUG] negocio_detalle payload:", payload)
+      setDetalleDebug(payload)
+
+      const normalized = toCanjesRawFromNegocioDetalle(payload)
+      console.log("[DEBUG] normalized canjesRaw:", normalized)
+      setCanjesRaw(normalized)
+    } catch (e) {
+      console.error(e)
+      setCanjesRaw({})
+    } finally {
+      setDetalleLoading(false)
+    }
+  }, [idNegocio])
+
   useEffect(() => {
     fetchData()
-  }, [fetchData])
+    fetchNegocioDetalle()
+  }, [fetchData, fetchNegocioDetalle])
 
   /* =========================
-     Normalizadores / datasets
+     Datasets
      ========================= */
   const totalCanjes = useMemo(() => {
     if (!stats) return 0
@@ -139,17 +231,10 @@ export function ColaboradorDashboard({
     }))
   }, [stats])
 
-  /**
-   * Historico: { "fecha_hora": ISO, titulo, monto_descuento }  (Caso A)
-   *            { "ISO date": [titulo, monto] } mezclado con otras claves (Caso B)
-   * Se agrupa por YYYY-MM-DD **en America/Mexico_City**
-   */
   const historicoData = useMemo(() => {
     const src = stats?.historico_de_canjes_ultimos_siete_dias ?? []
     const byDate = new Map<string, { date: string; canjes: number; monto_total_descuento: number }>()
-
     for (const item of src) {
-      // Caso A
       if (
         item &&
         typeof item === "object" &&
@@ -159,7 +244,7 @@ export function ColaboradorDashboard({
         const iso = String((item as any).fecha_hora)
         const d = parseISO(iso)
         if (!Number.isNaN(d.getTime())) {
-          const key = ymdInTZ(d) // YYYY-MM-DD MX
+          const key = ymdInTZ(d)
           const monto = Number((item as any).monto_descuento ?? 0)
           const prev = byDate.get(key) ?? { date: key, canjes: 0, monto_total_descuento: 0 }
           prev.canjes += 1
@@ -168,12 +253,10 @@ export function ColaboradorDashboard({
         }
         continue
       }
-
-      // Caso B
       for (const [k, v] of Object.entries(item ?? {})) {
-        const d = parseISO(k) // si k es ISO con zona, funciona; si no, será inválido y se ignora
+        const d = parseISO(k)
         if (Number.isNaN(d.getTime())) continue
-        const key = ymdInTZ(d) // YYYY-MM-DD MX
+        const key = ymdInTZ(d)
         const monto = Array.isArray(v) ? Number(v[1] ?? 0) : 0
         const prev = byDate.get(key) ?? { date: key, canjes: 0, monto_total_descuento: 0 }
         prev.canjes += 1
@@ -181,19 +264,17 @@ export function ColaboradorDashboard({
         byDate.set(key, prev)
       }
     }
-
     const arr = Array.from(byDate.values()).filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x.date))
     arr.sort((a, b) => (a.date < b.date ? -1 : 1))
     return arr
   }, [stats])
 
   /* =========================
-     Chart configs (SHADCN)
+     Chart configs
      ========================= */
   const barConfig: ChartConfig = {
     canjes: { label: "Canjes", color: "hsl(var(--chart-1))" },
   }
-
   const areaConfig: ChartConfig = {
     canjes: { label: "Canjes", color: "var(--chart-1)" },
     monto_total_descuento: { label: "Monto total", color: "var(--chart-2)" },
@@ -201,11 +282,34 @@ export function ColaboradorDashboard({
 
   return (
     <div className="min-h-screen relative text-white">
-      {/* Fondo aurora reutilizando tu clase global */}
       <div className="auth-aurora" />
       <div className="auth-stars" />
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        {/* ▲ Top row: full width chart fed by negocio_detalle */}
+        <section className="w-full">
+          {detalleLoading ? (
+            <Card className="glass border border-white/15">
+              <CardHeader>
+                <CardTitle className="text-white/80 text-sm">Cargando promociones – últimos 7 días…</CardTitle>
+              </CardHeader>
+              <CardContent className="py-8 flex items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-white/70" />
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="glass border border-white/15">
+              <CardContent>
+                <PromocionesChart canjesRaw={canjesRaw} />
+              </CardContent>  
+              <CardFooter>
+                <CardTitle className="text-sm text-white/70">Distribución de promociones</CardTitle>
+              </CardFooter>
+
+          </Card>
+          )}
+        </section>
+
         {/* Toolbar */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm text-white/75">
@@ -216,16 +320,17 @@ export function ColaboradorDashboard({
             <Button
               variant="outline"
               size="sm"
-              onClick={fetchData}
-              disabled={loading}
+              onClick={() => { fetchData(); fetchNegocioDetalle(); }}
+              disabled={loading || detalleLoading}
               className="bg-white/10 hover:bg-white/20 border-white/30 text-white"
             >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              {loading || detalleLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               <span className="ml-2">Actualizar</span>
             </Button>
           </div>
         </div>
 
+        {/* Error de stats */}
         {error && (
           <Card className="glass border border-red-400/30">
             <CardHeader>
@@ -281,7 +386,6 @@ export function ColaboradorDashboard({
 
         {/* Top + Histórico + Top */}
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Top 5 con más canjes */}
           <Card className="glass border border-white/15 lg:col-span-1">
             <CardHeader>
               <CardTitle className="text-white">Top 5: más canjes</CardTitle>
@@ -290,11 +394,7 @@ export function ColaboradorDashboard({
               <ChartContainer
                 config={barConfig}
                 className="h-64 w-full"
-                style={
-                  {
-                    "--color-canjes": "#38bdf8",
-                  } as React.CSSProperties
-                }
+                style={{ ["--color-canjes" as any]: "#38bdf8" } as React.CSSProperties}
               >
                 <BarChart data={topMasData} margin={{ left: 8, right: 8 }}>
                   <CartesianGrid vertical={false} strokeDasharray="3 3" />
@@ -316,13 +416,10 @@ export function ColaboradorDashboard({
                   </Bar>
                 </BarChart>
               </ChartContainer>
-              {!loading && topMasData.length === 0 && (
-                <p className="text-sm text-white/70 mt-2">Sin datos.</p>
-              )}
+              {!loading && topMasData.length === 0 && <p className="text-sm text-white/70 mt-2">Sin datos.</p>}
             </CardContent>
           </Card>
 
-          {/* Histórico 7 días */}
           <Card className="glass border border-white/15 lg:col-span-2 pt-0">
             <CardHeader className="flex items-center gap-2 space-y-0 border-b border-white/10 py-5 sm:flex-row">
               <div className="grid flex-1 gap-1">
@@ -354,7 +451,6 @@ export function ColaboradorDashboard({
 
                   <CartesianGrid stroke="rgba(255,255,255,0.1)" vertical={false} />
 
-                  {/* Eje X (fechas) */}
                   <XAxis
                     dataKey="date"
                     tickLine={false}
@@ -364,17 +460,11 @@ export function ColaboradorDashboard({
                     interval="preserveStartEnd"
                     tick={{ fill: "rgba(255,255,255,.75)" }}
                     tickFormatter={(value: string) => {
-                      // value es la clave YYYY-MM-DD (local MX)
                       const d = dateFromYmdLocalMX(value)
-                      return d.toLocaleDateString("es-MX", {
-                        timeZone: MX_TZ,
-                        month: "short",
-                        day: "numeric",
-                      })
+                      return d.toLocaleDateString("es-MX", { timeZone: MX_TZ, month: "short", day: "numeric" })
                     }}
                   />
 
-                  {/* Eje Y (valores) */}
                   <YAxis
                     tickLine={false}
                     axisLine={{ stroke: 'rgba(255,255,255,0.2)' }}
@@ -382,7 +472,6 @@ export function ColaboradorDashboard({
                     allowDecimals={false}
                   />
 
-                  {/* Tooltip */}
                   <ChartTooltip
                     cursor={true}
                     content={
@@ -394,7 +483,6 @@ export function ColaboradorDashboard({
                         }}
                         labelStyle={{ color: '#fff' }}
                         labelFormatter={(value) => {
-                          // value puede ser YYYY-MM-DD (clave) o ISO con TZ
                           const s = String(value)
                           const d = s.includes("T") ? parseISO(s) : dateFromYmdLocalMX(s)
                           return d.toLocaleDateString("es-MX", {
@@ -417,7 +505,6 @@ export function ColaboradorDashboard({
                     }
                   />
 
-                  {/* Leyenda */}
                   <ChartLegend content={<ChartLegendContent />} />
                   <Legend wrapperStyle={{ color: '#ffffffcc' }} />
 
@@ -477,31 +564,9 @@ export function ColaboradorDashboard({
                   </Bar>
                 </BarChart>
               </ChartContainer>
-              {!loading && topMenosData.length === 0 && (
-                <p className="text-sm text-white/70 mt-2">Sin datos.</p>
-              )}
+              {!loading && topMenosData.length === 0 && <p className="text-sm text-white/70 mt-2">Sin datos.</p>}
             </CardContent>
           </Card>
-
-          {/* Próximamente */}
-          <div className="lg:col-span-2 grid gap-6 sm:grid-cols-2">
-            <Card className="glass border border-white/10">
-              <CardHeader>
-                <CardTitle className="text-sm text-white/70">Próximamente</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-white/60">
-                Tabla de canjes recientes / exportaciones / comparativas.
-              </CardContent>
-            </Card>
-            <Card className="glass border border-white/10">
-              <CardHeader>
-                <CardTitle className="text-sm text-white/70">Próximamente</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-white/60">
-                Desglose por sucursal o categoría.
-              </CardContent>
-            </Card>
-          </div>
         </div>
       </main>
     </div>
