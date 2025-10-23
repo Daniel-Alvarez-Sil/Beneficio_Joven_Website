@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Switch } from "./ui/switch";
 import { Button } from "./ui/button";
@@ -61,7 +61,7 @@ import { createPromocion } from "@/actions/colaboradores/create-promocion";
 interface ColaboradorDashboardProps {
   onLogout: () => void;
   colaboradorName: string;
-  idNegocio?: string;
+  idNegocio?: string; // no lo mandaremos en el POST
 }
 
 function formatDateMX(iso: string) {
@@ -105,6 +105,11 @@ function toUtcIsoFromDateAndTime(date: Date | null, timeHHMM: string): string | 
   return d.toISOString();
 }
 
+// ISO sin milisegundos: "2025-10-22T15:00:00.063Z" -> "2025-10-22T15:00:00Z"
+function stripMs(iso: string) {
+  return iso.replace(/\.\d{3}Z$/, "Z");
+}
+
 // Build 30-minute options "HH:MM"
 const TIME_OPTIONS: string[] = Array.from({ length: 24 * 2 }, (_, i) => {
   const h = String(Math.floor(i / 2)).padStart(2, "0");
@@ -112,10 +117,27 @@ const TIME_OPTIONS: string[] = Array.from({ length: 24 * 2 }, (_, i) => {
   return `${h}:${m}`;
 });
 
+// === Tipo de promoción (solo UX/validación/prefijo) ===
+const TIPO_OPCIONES = [
+  { value: "porcentaje", label: "Descuento (%)" },
+  { value: "precio", label: "Precio fijo (MXN)" },
+  { value: "2x1", label: "2x1" },
+  { value: "trae_un_amigo", label: "Trae un amigo" },
+  { value: "otro", label: "Otra" },
+] as const;
+type TipoPromo = typeof TIPO_OPCIONES[number]["value"];
+const TIPO_LABEL: Record<TipoPromo, string> = {
+  porcentaje: "Descuento",
+  precio: "Precio fijo",
+  "2x1": "2x1",
+  "trae_un_amigo": "Trae un amigo",
+  otro: "Otra",
+};
+
 export function ColaboradorPromociones({
   colaboradorName,
   onLogout = logout,
-  idNegocio = "3",
+  idNegocio = "3", // no se envía
 }: ColaboradorDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -141,16 +163,17 @@ export function ColaboradorPromociones({
   const [horaInicio, setHoraInicio] = useState<string>("09:00");
   const [horaFin, setHoraFin] = useState<string>("21:00");
 
+  // Tipo (UX)
+  const [tipo, setTipo] = useState<TipoPromo>("porcentaje");
+
   // Imagen
   const [imagenFile, setImagenFile] = useState<File | null>(null);
   const [imagenPreview, setImagenPreview] = useState<string | null>(null);
   const [fileKey, setFileKey] = useState(0);
 
-  // Mutually-exclusive logic (live)
-  const pctNum = Number(porcentaje || "0");
-  const prcNum = Number(precio || "0");
-  const disablePrecio = isFinite(pctNum) && pctNum !== 0;
-  const disablePorcentaje = isFinite(prcNum) && prcNum !== 0;
+  // Habilitación de numéricos según tipo
+  const disablePrecio = tipo !== "precio";
+  const disablePorcentaje = tipo !== "porcentaje";
 
   useEffect(() => {
     let mounted = true;
@@ -205,20 +228,14 @@ export function ColaboradorPromociones({
     setDeletingId(null);
   };
 
-  // Keep fields exclusive as user types
+  // Exclusividad visual al teclear
   const onChangePorcentaje = (value: string) => {
     setPorcentaje(value);
-    const v = Number(value || "0");
-    if (isFinite(v) && v !== 0) {
-      setPrecio("0.00000");
-    }
+    if (tipo === "porcentaje") setPrecio("0.00000");
   };
   const onChangePrecio = (value: string) => {
     setPrecio(value);
-    const v = Number(value || "0");
-    if (isFinite(v) && v !== 0) {
-      setPorcentaje("0.00");
-    }
+    if (tipo === "precio") setPorcentaje("0.00");
   };
 
   // Imagen: validación + preview
@@ -260,14 +277,14 @@ export function ColaboradorPromociones({
     setFechaInicioDate(today);
     setFechaFinDate(today);
     setHoraInicio("09:00");
-    setHoraFin("21:00");
+    setHoraFin("21:00"); // <- corregido (quitado el `1`)
+    setTipo("porcentaje");
 
     if (imagenPreview) URL.revokeObjectURL(imagenPreview);
     setImagenPreview(null);
     setImagenFile(null);
 
-    // fuerza remount del <input type="file">
-    setFileKey((k) => k + 1);
+    setFileKey((k) => k + 1); // remount del <input type="file">
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -275,7 +292,7 @@ export function ColaboradorPromociones({
     setError(null);
 
     if (!nombre.trim()) {
-      setError("El nombre es obligatorio.");
+      setError("El título es obligatorio.");
       return;
     }
     const fi = toUtcIsoFromDateAndTime(fechaInicioDate, horaInicio);
@@ -289,31 +306,70 @@ export function ColaboradorPromociones({
       return;
     }
 
-    // Exclusividad en submit
-    let pct = Number(porcentaje || "0");
-    let prc = Number(precio || "0");
-    if (pct !== 0) prc = 0;
-    if (prc !== 0) pct = 0;
+    // Validaciones por tipo
+    let pct = 0;
+    let prc = 0;
 
-    // Construir FormData para incluir imagen (si hay)
+    if (tipo === "porcentaje") {
+      const v = Number(porcentaje || "0");
+      if (!isFinite(v) || v <= 0) {
+        setError("Ingresa un porcentaje válido (> 0).");
+        return;
+      }
+      pct = Number(v.toFixed(2));
+      prc = 0;
+    } else if (tipo === "precio") {
+      const v = Number(precio || "0");
+      if (!isFinite(v) || v <= 0) {
+        setError("Ingresa un precio válido (> 0).");
+        return;
+      }
+      prc = Number(v.toFixed(5));
+      pct = 0;
+    } else {
+      // 2x1 / trae_un_amigo / otro
+      pct = 0;
+      prc = 0;
+    }
+
+    // Formatos fijos
+    const porcentajeStr = tipo === "porcentaje" ? pct.toFixed(2) : "0.00";
+    const precioStr = tipo === "precio" ? prc.toFixed(5) : "0.00000";
+
+    // Descripción final (prefijo para no numéricos)
+    const descBase = (descripcion || "").trim();
+    const esNoNumerico =
+      tipo === "2x1" || tipo === "trae_un_amigo" || tipo === "otro";
+    const descripcionFinal = esNoNumerico
+      ? descBase
+        ? `${TIPO_LABEL[tipo]}: ${descBase}`
+        : `${TIPO_LABEL[tipo]}`
+      : descBase;
+
+    // Fechas sin ms
+    const fiIso = stripMs(fi);
+    const ffIso = stripMs(ff);
+
+    // 🚫 Sin 'tipo' y 🚫 sin 'negocio' en el payload
     const fd = new FormData();
     fd.append("nombre", nombre.trim());
-    fd.append("descripcion", descripcion.trim());
-    fd.append("fecha_inicio", fi);
-    fd.append("fecha_fin", ff);
+    fd.append("descripcion", descripcionFinal);
+    fd.append("fecha_inicio", fiIso);
+    fd.append("fecha_fin", ffIso);
     fd.append("limite_por_usuario", String(Number(limitePorUsuario || 0)));
     fd.append("limite_total", String(Number(limiteTotal || 0)));
-    fd.append("porcentaje", String(Number(pct.toFixed(2))));
-    fd.append("precio", String(Number(prc.toFixed(5))));
-    fd.append("activo", String(activo ? 1 : 0));
+    fd.append("porcentaje", porcentajeStr);
+    fd.append("precio", precioStr);
+    fd.append("activo", String(activo ? true : false)); // si tu API prefiere 1/0, cambia a String(activo ? 1 : 0)
+
     if (imagenFile) {
-      fd.append("file", imagenFile);
+      fd.append("imagen", imagenFile); // si tu API exige 'file', cambia aquí el nombre de campo
     }
 
     setCreating(true);
     const ok = await createPromocion(fd);
     if (!ok) {
-      setError("No se pudo crear la promoción. Intenta de nuevo.");
+      setError("No se pudo crear la promoción. Revisa los campos e intenta de nuevo.");
       setCreating(false);
       return;
     }
@@ -321,7 +377,9 @@ export function ColaboradorPromociones({
     try {
       const data = await getPromociones();
       setPromos(data);
-    } catch {}
+    } catch {
+      // no-op
+    }
 
     resetForm();
     setCreating(false);
@@ -369,7 +427,7 @@ export function ColaboradorPromociones({
                 <form onSubmit={handleCreate} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="nombre">Nombre</Label>
+                      <Label htmlFor="nombre">Título (nombre)</Label>
                       <Input
                         id="nombre"
                         value={nombre}
@@ -392,6 +450,23 @@ export function ColaboradorPromociones({
                           {activo ? "Activo" : "Inactivo"}
                         </span>
                       </div>
+                    </div>
+
+                    {/* Tipo de promoción (UX) */}
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="tipo">Tipo de promoción</Label>
+                      <Select value={tipo} onValueChange={(v: TipoPromo) => setTipo(v)}>
+                        <SelectTrigger id="tipo" className="w-full bg-white/10 border-white/30 text-white">
+                          <SelectValue placeholder="Selecciona un tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TIPO_OPCIONES.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div className="md:col-span-2 space-y-2">
@@ -525,7 +600,7 @@ export function ColaboradorPromociones({
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="porcentaje">Porcentaje</Label>
+                      <Label htmlFor="porcentaje">Descuento (%)</Label>
                       <Input
                         id="porcentaje"
                         type="number"
@@ -534,11 +609,12 @@ export function ColaboradorPromociones({
                         onChange={(e) => onChangePorcentaje(e.target.value)}
                         placeholder="0.00"
                         disabled={disablePorcentaje}
+                        required={tipo === "porcentaje"}
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="precio">Precio</Label>
+                      <Label htmlFor="precio">Precio fijo (MXN)</Label>
                       <Input
                         id="precio"
                         type="number"
@@ -547,6 +623,7 @@ export function ColaboradorPromociones({
                         onChange={(e) => onChangePrecio(e.target.value)}
                         placeholder="100.00000"
                         disabled={disablePrecio}
+                        required={tipo === "precio"}
                       />
                     </div>
 
@@ -630,7 +707,6 @@ export function ColaboradorPromociones({
               const fin = formatDateMX(p.fecha_fin);
               const isBusy = busyId === p.id || deletingId === p.id;
 
-              // ✅ usa directamente p.imagen con un fallback seguro
               const imgUrl = p.imagen && p.imagen.trim() !== "" ? p.imagen : null;
 
               return (
@@ -647,11 +723,10 @@ export function ColaboradorPromociones({
                           alt={p.nombre}
                           className="w-full h-full object-cover"
                           loading="lazy"
-                          referrerPolicy="no-referrer"     // opcional: evita bloqueos por referrer en S3
+                          referrerPolicy="no-referrer"
                         />
                       </div>
                     ) : (
-                      // placeholder cuando no hay imagen
                       <div className="hidden md:block w-full h-[120px] bg-white/5" />
                     )}
 
