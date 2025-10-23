@@ -40,7 +40,7 @@ class PromocionListView(APIView):
         id_administrador_negocio = request.user.id if request.user and request.user.is_authenticated else None
         username = User.objects.get(id=id_administrador_negocio).username if id_administrador_negocio else None
         try: 
-            administradorNegocio = AdministradorNegocio.objects.get(usuario=username) 
+            administradorNegocio = AdministradorNegocio.objects.get(correo=username)
         except AdministradorNegocio.DoesNotExist:
             administradorNegocio = Cajero.objects.get(Q(usuario=username) | Q(correo=username))
         if administradorNegocio:
@@ -49,11 +49,15 @@ class PromocionListView(APIView):
             return Response({"detail": "No se encontró el administrador de negocio."}, status=status.HTTP_404_NOT_FOUND)
         id_negocio = administradorNegocio.id_negocio if administradorNegocio else None
 
-        promociones = Promocion.objects.filter(id_negocio=id_negocio).only(
-            "id",
-            "nombre", "descripcion", "fecha_inicio", "fecha_fin",
-            "tipo", "porcentaje", "precio", "activo", "numero_canjeados", "imagen"
-        )
+        try: 
+            promociones = Promocion.objects.filter(id_negocio=id_negocio).only(
+                "id",
+                "nombre", "descripcion", "fecha_inicio", "fecha_fin",
+                "tipo", "porcentaje", "precio", "activo", "numero_canjeados", "imagen"
+            )
+        except Promocion.DoesNotExist:
+            return Response([], status=status.HTTP_200_OK)
+
 
         serializer = PromocionListSerializer(promociones, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)

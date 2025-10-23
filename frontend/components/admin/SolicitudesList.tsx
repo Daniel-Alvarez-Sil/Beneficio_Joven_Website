@@ -317,7 +317,7 @@ async function handleSubmitReview() {
                     >
                       <div className="flex items-center space-x-2 rounded-lg border border-white/20 px-3 py-2">
                         <RadioGroupItem
-                          value="APROBADA"
+                          value="aprobado"
                           id="r-ap"
                           className="border-white/40 text-white/60 data-[state=checked]:text-white data-[state=checked]:border-white"
                         />
@@ -327,7 +327,7 @@ async function handleSubmitReview() {
                       </div>
                       <div className="flex items-center space-x-2 rounded-lg border border-white/20 px-3 py-2">
                         <RadioGroupItem
-                          value="RECHAZADA"
+                          value="rechazado"
                           id="r-re"
                           className="border-white/40 text-white/60 data-[state=checked]:text-white data-[state=checked]:border-white"
                         />

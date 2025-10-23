@@ -74,6 +74,7 @@ class ReviewSolicitudNegocioAPIView(APIView):
         solicitud.estatus = estatus
         solicitud.save()
         count = SolicitudNegocioDetalle.objects.filter(id_solicitud=id_solicitud).count()
+        print("Estatus y id_solicitud:", estatus, solicitud.id_negocio)
         # Create SolicitudNegocioDetalle entry
         detalle = SolicitudNegocioDetalle(
             id_solicitud=solicitud,
@@ -92,6 +93,9 @@ class ReviewSolicitudNegocioAPIView(APIView):
                 password=admin.contrasena,
                 tipo="colaborador"
             )
+
+        negocio = Negocio.objects.filter(id=solicitud.id_negocio.id).first()
+        negocio.estatus = 'activo' if estatus.lower() == "aprobado" else 'inactivo'
 
         return Response({"message": "Solicitud revisada exitosamente."}, status=status.HTTP_200_OK)
 
@@ -275,7 +279,7 @@ class NegociosResumenView(APIView):
                     default=Value(0.0),
                     output_field=FloatField()
                 )
-            )
+            ).filter(estatus='activo')
             .order_by('nombre')
             .values(
                 'id', 'nombre', 'estatus', 'logo',
