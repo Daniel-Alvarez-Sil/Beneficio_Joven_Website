@@ -47,6 +47,7 @@ import {
   Plus,
   Trash2,
   Image as ImageIcon,
+  Pencil,
 } from "lucide-react";
 
 import { logout } from "@/actions/login/auth";
@@ -57,6 +58,7 @@ import {
 import { cambiarEstatusPromocion } from "@/actions/colaboradores/update-estatus-promocion";
 import { deletePromocion } from "@/actions/colaboradores/delete-promocion";
 import { createPromocion } from "@/actions/colaboradores/create-promocion";
+import { editarPromocion } from "@/actions/colaboradores/editar-promocion";
 
 interface ColaboradorDashboardProps {
   onLogout: () => void;
@@ -105,7 +107,7 @@ function toUtcIsoFromDateAndTime(date: Date | null, timeHHMM: string): string | 
   return d.toISOString();
 }
 
-// ISO sin milisegundos: "2025-10-22T15:00:00.063Z" -> "2025-10-22T15:00:00Z"
+// ISO sin milisegundos
 function stripMs(iso: string) {
   return iso.replace(/\.\d{3}Z$/, "Z");
 }
@@ -133,6 +135,17 @@ const TIPO_LABEL: Record<TipoPromo, string> = {
   "trae_un_amigo": "Trae un amigo",
   otro: "Otra",
 };
+
+function inferTipoFromPromo(p: any): TipoPromo {
+  const pct = Number(p.porcentaje || 0);
+  const prc = Number(p.precio || 0);
+  if (isFinite(pct) && pct > 0) return "porcentaje";
+  if (isFinite(prc) && prc > 0) return "precio";
+  const desc = (p.descripcion || "").toLowerCase();
+  if (desc.startsWith("2x1")) return "2x1";
+  if (desc.startsWith("trae un amigo") || desc.startsWith("trae a tu")) return "trae_un_amigo";
+  return "otro";
+}
 
 export function ColaboradorPromociones({
   colaboradorName,
@@ -166,10 +179,15 @@ export function ColaboradorPromociones({
   // Tipo (UX)
   const [tipo, setTipo] = useState<TipoPromo>("porcentaje");
 
-  // Imagen
+  // Imagen (crear/editar)
   const [imagenFile, setImagenFile] = useState<File | null>(null);
   const [imagenPreview, setImagenPreview] = useState<string | null>(null);
   const [fileKey, setFileKey] = useState(0);
+
+  // === edición ===
+  const [openEdit, setOpenEdit] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [imagenActual, setImagenActual] = useState<string | null>(null);
 
   // Habilitación de numéricos según tipo
   const disablePrecio = tipo !== "precio";
@@ -203,18 +221,25 @@ export function ColaboradorPromociones({
   const handleToggleActivo = async (id: number) => {
     setError(null);
     setBusyId(id);
+
+    // optimista
     setPromos((prev) =>
       prev.map((p) => (p.id === id ? { ...p, activo: !p.activo } : p))
     );
+
     const ok = await cambiarEstatusPromocion(id);
+
     if (!ok) {
+      // deshacer
       setPromos((prev) =>
         prev.map((p) => (p.id === id ? { ...p, activo: !p.activo } : p))
       );
       setError("No se pudo cambiar el estatus. Intenta de nuevo.");
     }
+
     setBusyId(null);
   };
+
 
   const handleDelete = async (id: number) => {
     setError(null);
@@ -248,7 +273,7 @@ export function ColaboradorPromociones({
     }
 
     const validTypes = ["image/jpeg", "image/png", "image/webp"];
-    const maxMB = 5;
+       const maxMB = 5;
     if (!validTypes.includes(file.type)) {
       setError("La imagen debe ser JPG, PNG o WEBP.");
       e.currentTarget.value = "";
@@ -277,7 +302,7 @@ export function ColaboradorPromociones({
     setFechaInicioDate(today);
     setFechaFinDate(today);
     setHoraInicio("09:00");
-    setHoraFin("21:00"); // <- corregido (quitado el `1`)
+    setHoraFin("21:00");
     setTipo("porcentaje");
 
     if (imagenPreview) URL.revokeObjectURL(imagenPreview);
@@ -287,6 +312,7 @@ export function ColaboradorPromociones({
     setFileKey((k) => k + 1); // remount del <input type="file">
   };
 
+  // ---------------- CREAR ----------------
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -327,30 +353,22 @@ export function ColaboradorPromociones({
       prc = Number(v.toFixed(5));
       pct = 0;
     } else {
-      // 2x1 / trae_un_amigo / otro
       pct = 0;
       prc = 0;
     }
 
-    // Formatos fijos
     const porcentajeStr = tipo === "porcentaje" ? pct.toFixed(2) : "0.00";
     const precioStr = tipo === "precio" ? prc.toFixed(5) : "0.00000";
 
-    // Descripción final (prefijo para no numéricos)
     const descBase = (descripcion || "").trim();
-    const esNoNumerico =
-      tipo === "2x1" || tipo === "trae_un_amigo" || tipo === "otro";
+    const esNoNumerico = tipo === "2x1" || tipo === "trae_un_amigo" || tipo === "otro";
     const descripcionFinal = esNoNumerico
-      ? descBase
-        ? `${TIPO_LABEL[tipo]}: ${descBase}`
-        : `${TIPO_LABEL[tipo]}`
+      ? descBase ? `${TIPO_LABEL[tipo]}: ${descBase}` : `${TIPO_LABEL[tipo]}`
       : descBase;
 
-    // Fechas sin ms
     const fiIso = stripMs(fi);
     const ffIso = stripMs(ff);
 
-    // 🚫 Sin 'tipo' y 🚫 sin 'negocio' en el payload
     const fd = new FormData();
     fd.append("nombre", nombre.trim());
     fd.append("descripcion", descripcionFinal);
@@ -360,11 +378,8 @@ export function ColaboradorPromociones({
     fd.append("limite_total", String(Number(limiteTotal || 0)));
     fd.append("porcentaje", porcentajeStr);
     fd.append("precio", precioStr);
-    fd.append("activo", String(activo ? true : false)); // si tu API prefiere 1/0, cambia a String(activo ? 1 : 0)
-
-    if (imagenFile) {
-      fd.append("imagen", imagenFile); // si tu API exige 'file', cambia aquí el nombre de campo
-    }
+    fd.append("activo", String(activo ? true : false));
+    if (imagenFile) fd.append("file", imagenFile);
 
     setCreating(true);
     const ok = await createPromocion(fd);
@@ -377,14 +392,140 @@ export function ColaboradorPromociones({
     try {
       const data = await getPromociones();
       setPromos(data);
-    } catch {
-      // no-op
-    }
+    } catch {}
 
     resetForm();
     setCreating(false);
     setOpenCreate(false);
   };
+
+  // ---------------- EDITAR ----------------
+  const openEditWith = (p: any) => {
+    setEditingId(p.id);
+
+    // Limpia prefijos como "2x1: ", "Trae un amigo: ", "Otra: "
+    const cleanDesc = (p.descripcion || "").replace(
+      /^(\s*2x1\s*:|\s*trae\s+un\s+amigo\s*:|\s*otra\s*:)\s*/i,
+      ""
+    );
+
+    setNombre(p.nombre || "");
+    setDescripcion(cleanDesc);
+    setLimitePorUsuario(Number(p.limite_por_usuario || 0) || "");
+    setLimiteTotal(Number(p.limite_total || 0) || "");
+    setActivo(Boolean(p.activo));
+
+    try {
+      const ini = new Date(p.fecha_inicio);
+      const fin = new Date(p.fecha_fin);
+      setFechaInicioDate(ini);
+      setFechaFinDate(fin);
+      const pad = (n: number) => String(n).padStart(2, "0");
+      setHoraInicio(`${pad(ini.getHours())}:${pad(ini.getMinutes() >= 30 ? 30 : 0)}`);
+      setHoraFin(`${pad(fin.getHours())}:${pad(fin.getMinutes() >= 30 ? 30 : 0)}`);
+    } catch {
+      setFechaInicioDate(today);
+      setFechaFinDate(today);
+      setHoraInicio("09:00");
+      setHoraFin("21:00");
+    }
+
+    const t = inferTipoFromPromo(p);
+    setTipo(t);
+    if (t === "porcentaje") {
+      setPorcentaje(Number(p.porcentaje || 0).toFixed(2));
+      setPrecio("0.00000");
+    } else if (t === "precio") {
+      setPrecio(Number(p.precio || 0).toFixed(5));
+      setPorcentaje("0.00");
+    } else {
+      setPorcentaje("0.00");
+      setPrecio("0.00000");
+    }
+
+    setImagenActual(p.imagen || null);
+    setImagenFile(null);
+    setImagenPreview(null);
+    setFileKey((k) => k + 1);
+
+    setOpenEdit(true);
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingId == null) return;
+    setError(null);
+
+    if (!nombre.trim()) {
+      setError("El título es obligatorio.");
+      return;
+    }
+
+    const fi = toUtcIsoFromDateAndTime(fechaInicioDate, horaInicio);
+    const ff = toUtcIsoFromDateAndTime(fechaFinDate, horaFin);
+    if (!fi || !ff) {
+      setError("Selecciona fechas y horas válidas.");
+      return;
+    }
+    if (new Date(fi) > new Date(ff)) {
+      setError("La fecha/hora de inicio no puede ser posterior a la de fin.");
+      return;
+    }
+
+    let pct = 0, prc = 0;
+    if (tipo === "porcentaje") {
+      const v = Number(porcentaje || "0");
+      if (!isFinite(v) || v <= 0) { setError("Ingresa un porcentaje válido (> 0)."); return; }
+      pct = Number(v.toFixed(2));
+    } else if (tipo === "precio") {
+      const v = Number(precio || "0");
+      if (!isFinite(v) || v <= 0) { setError("Ingresa un precio válido (> 0)."); return; }
+      prc = Number(v.toFixed(5));
+    }
+
+    const porcentajeStr = tipo === "porcentaje" ? pct.toFixed(2) : "0.00";
+    const precioStr = tipo === "precio" ? prc.toFixed(5) : "0.00000";
+
+    const descBase = (descripcion || "").trim();
+    const esNoNumerico = (tipo === "2x1" || tipo === "trae_un_amigo" || tipo === "otro");
+    const descripcionFinal = esNoNumerico
+      ? (descBase ? `${TIPO_LABEL[tipo]}: ${descBase}` : `${TIPO_LABEL[tipo]}`)
+      : descBase;
+
+    const fiIso = stripMs(fi);
+    const ffIso = stripMs(ff);
+
+    const fd = new FormData();
+    fd.append("id_promocion", String(editingId));          // ← IMPORTANTE
+    fd.append("nombre", nombre.trim());
+    fd.append("descripcion", descripcionFinal);
+    fd.append("fecha_inicio", fiIso);
+    fd.append("fecha_fin", ffIso);
+    fd.append("limite_por_usuario", String(Number(limitePorUsuario || 0)));
+    fd.append("limite_total", String(Number(limiteTotal || 0)));
+    fd.append("porcentaje", porcentajeStr);
+    fd.append("precio", precioStr);
+    fd.append("activo", String(!!activo));
+    if (imagenFile) fd.append("file", imagenFile);         // sólo si reemplazas imagen
+
+    setCreating(true);
+    const ok = await editarPromocion(editingId, fd);
+    if (!ok) {
+      setError("No se pudo actualizar la promoción.");
+      setCreating(false);
+      return;
+    }
+
+    try {
+      const data = await getPromociones();
+      setPromos(data);
+    } catch {}
+
+    setCreating(false);
+    setOpenEdit(false);
+    setEditingId(null);
+  };
+
 
   return (
     <div className="min-h-screen relative text-white">
@@ -680,9 +821,280 @@ export function ColaboradorPromociones({
               </div>
             </DialogContent>
           </Dialog>
+
+          {/* ====== EDITAR ====== */}
+          <Dialog open={openEdit} onOpenChange={(v)=>{ if(!v){ setOpenEdit(false); setEditingId(null);} }}>
+            <DialogOverlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
+            <DialogContent className="max-w-2xl glass-alt border border-white/20 text-white max-h-[85vh] overflow-y-auto">
+              <div className="p-6">
+                <DialogHeader>
+                  <DialogTitle>Editar promoción</DialogTitle>
+                  <DialogDescription>Actualiza los campos necesarios.</DialogDescription>
+                </DialogHeader>
+
+                {error ? (
+                  <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    {error}
+                  </div>
+                ) : null}
+
+                <form onSubmit={handleUpdate} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="nombre_edit">Título (nombre)</Label>
+                      <Input
+                        id="nombre_edit"
+                        value={nombre}
+                        onChange={(e) => setNombre(e.target.value)}
+                        placeholder="Ej. Viernes 2x1"
+                        required
+                        className="input-apple text-white placeholder-white/60 caret-white"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="activo_edit">Estatus</Label>
+                      <div className="flex items-center gap-3 h-10 px-3 rounded-md border">
+                        <Switch
+                          id="activo_edit"
+                          checked={activo}
+                          onCheckedChange={setActivo}
+                        />
+                        <span className="text-sm">
+                          {activo ? "Activo" : "Inactivo"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Tipo de promoción (UX) */}
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="tipo_edit">Tipo de promoción</Label>
+                      <Select value={tipo} onValueChange={(v: TipoPromo) => setTipo(v)}>
+                        <SelectTrigger id="tipo_edit" className="w-full bg-white/10 border-white/30 text-white">
+                          <SelectValue placeholder="Selecciona un tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TIPO_OPCIONES.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="md:col-span-2 space-y-2">
+                      <Label htmlFor="descripcion_edit">Descripción</Label>
+                      <Textarea
+                        id="descripcion_edit"
+                        value={descripcion}
+                        onChange={(e) => setDescripcion(e.target.value)}
+                        placeholder="Detalles de la promoción…"
+                        rows={3}
+                        className="input-apple text-white placeholder-white/60 caret-white"
+                      />
+                    </div>
+
+                    {/* Calendarios + horas */}
+                    <div className="space-y-2">
+                      <Label>Fecha inicio</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full justify-start gap-2 bg-white/10 border-white/30 text-white hover:bg-white/15"
+                          >
+                            <CalendarIcon className="h-4 w-4" />
+                            {fechaInicioDate
+                              ? fechaInicioDate.toLocaleDateString("es-MX")
+                              : "Selecciona fecha"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="p-0">
+                          <Calendar
+                            mode="single"
+                            selected={fechaInicioDate ?? undefined}
+                            onSelect={(d) => setFechaInicioDate(d ?? null)}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs">Hora inicio</Label>
+                        <Select value={horaInicio} onValueChange={setHoraInicio}>
+                          <SelectTrigger className="w-full bg-white/10 border-white/30 text-white">
+                            <SelectValue placeholder="Selecciona hora" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TIME_OPTIONS.map((t) => (
+                              <SelectItem key={t} value={t}>
+                                {t}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Fecha fin</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full justify-start gap-2 bg-white/10 border-white/30 text-white hover:bg-white/15"
+                          >
+                            <CalendarIcon className="h-4 w-4" />
+                            {fechaFinDate
+                              ? fechaFinDate.toLocaleDateString("es-MX")
+                              : "Selecciona fecha"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="p-0">
+                          <Calendar
+                            mode="single"
+                            selected={fechaFinDate ?? undefined}
+                            onSelect={(d) => setFechaFinDate(d ?? null)}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs">Hora fin</Label>
+                        <Select value={horaFin} onValueChange={setHoraFin}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Selecciona hora" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TIME_OPTIONS.map((t) => (
+                              <SelectItem key={t} value={t}>
+                                {t}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Límites y descuentos */}
+                    <div className="space-y-2">
+                      <Label htmlFor="limite_por_usuario_edit">Límite por usuario</Label>
+                      <Input
+                        id="limite_por_usuario_edit"
+                        type="number"
+                        min={0}
+                        value={limitePorUsuario}
+                        onChange={(e) =>
+                          setLimitePorUsuario(
+                            e.target.value === "" ? "" : Number(e.target.value)
+                          )
+                        }
+                        placeholder="Ej. 10"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="limite_total_edit">Límite total</Label>
+                      <Input
+                        id="limite_total_edit"
+                        type="number"
+                        min={0}
+                        value={limiteTotal}
+                        onChange={(e) =>
+                          setLimiteTotal(
+                            e.target.value === "" ? "" : Number(e.target.value)
+                          )
+                        }
+                        placeholder="Ej. 100"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="porcentaje_edit">Descuento (%)</Label>
+                      <Input
+                        id="porcentaje_edit"
+                        type="number"
+                        step="0.01"
+                        value={porcentaje}
+                        onChange={(e) => onChangePorcentaje(e.target.value)}
+                        placeholder="0.00"
+                        disabled={disablePorcentaje}
+                        required={tipo === "porcentaje"}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="precio_edit">Precio fijo (MXN)</Label>
+                      <Input
+                        id="precio_edit"
+                        type="number"
+                        step="0.00001"
+                        value={precio}
+                        onChange={(e) => onChangePrecio(e.target.value)}
+                        placeholder="100.00000"
+                        disabled={disablePrecio}
+                        required={tipo === "precio"}
+                      />
+                    </div>
+
+                    {/* Imagen actual + reemplazo */}
+                    <div className="md:col-span-2 space-y-2">
+                      <Label htmlFor="imagen_edit" className="flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4" /> Imagen de la promoción (JPG/PNG/WEBP, máx 5MB)
+                      </Label>
+
+                      {imagenActual ? (
+                        <div className="w-full rounded-xl border border-white/15 bg-white/5 p-2 mb-2">
+                          <img
+                            src={imagenActual}
+                            alt="Imagen actual"
+                            className="w-full max-h-40 object-contain rounded-lg"
+                          />
+                          <p className="text-xs text-white/60 mt-1">
+                            Si eliges un archivo, se reemplazará.
+                          </p>
+                        </div>
+                      ) : null}
+
+                      <Input
+                        key={fileKey}
+                        id="imagen_edit"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={onSelectImagen}
+                      />
+                      {imagenPreview ? (
+                        <div className="mt-2 w-full rounded-xl border border-white/15 bg-white/5 p-2">
+                          <img
+                            src={imagenPreview}
+                            alt="Vista previa"
+                            className="w-full max-h-64 md:max-h-72 object-contain rounded-lg"
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <DialogFooter className="gap-2">
+                    <Button type="button" variant="secondary" onClick={()=>{ setOpenEdit(false); setEditingId(null); }}>
+                      Cancelar
+                    </Button>
+                    <Button type="submit" disabled={creating} className="btn-gradient btn-apple text-white">
+                      {creating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                      Guardar cambios
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
-        {error && !openCreate ? (
+        {error && !openCreate && !openEdit ? (
           <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             {error}
           </div>
@@ -759,6 +1171,19 @@ export function ColaboradorPromociones({
                             disabled={isBusy}
                             aria-label={`Cambiar estatus de ${p.nombre}`}
                           />
+                          {/* Botón Editar */}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="hover:bg-white/10"
+                            aria-label={`Editar promoción ${p.nombre}`}
+                            title="Editar promoción"
+                            disabled={isBusy}
+                            onClick={() => openEditWith(p)}
+                          >
+                            <Pencil className="h-4 w-4 text-white" />
+                          </Button>
+                          {/* Botón Borrar */}
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button
