@@ -166,7 +166,7 @@ export function DashboardOverview() {
         dataObj={headerStats?.promociones_activas_por_negocio}
         centerLabel="Total"
       />
-      <PromocionesChart id_negocio={4} />
+      {/* <PromocionesChart id_negocio={4} /> */}
     </div>
   );
 }

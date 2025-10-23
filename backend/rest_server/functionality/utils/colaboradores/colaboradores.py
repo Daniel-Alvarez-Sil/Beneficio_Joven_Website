@@ -228,6 +228,13 @@ class PromocionCreateView(generics.CreateAPIView):
     # Adjust permissions as needed
     permission_classes = [permissions.AllowAny]  # or [permissions.AllowAny]
 
+class PromocionUpdateCompleteView(generics.UpdateAPIView):
+    print("Entrando a PromocionUpdateView")
+    queryset = Promocion.objects.all()
+    serializer_class = PromocionCreateSerializer
+    # Adjust permissions as needed
+    permission_classes = [permissions.AllowAny]  # or [permissions.AllowAny]
+
 class CreateCajeroView(generics.CreateAPIView):
     print("Entrando a CreateCajeroView")
     permission_classes = [permissions.AllowAny]

@@ -1,7 +1,7 @@
 # Colaboradores Views
 from .utils.colaboradores.colaboradores import (AdministradorNegocioCreateView, PromocionListView, 
                     PromocionDeleteView, PromocionUpdateView, PromocionCreateView, 
-                    EstadisticasNegocioView, CreateCajeroView)
+                    EstadisticasNegocioView, CreateCajeroView, PromocionUpdateCompleteView)
 
 # Administradores Views
 from .utils.administradores.administradores import (SolicitudNegocioListView, 

@@ -10,7 +10,7 @@ from .views import (AdministradorNegocioCreateView, PromocionListView,
 from .views import (PromocionesPorNegocioUltimoMes, SolicitudNegocioListView, CanjesPorNegocioLastMonthView,
                     TotalColaboradoresView, PromocionesActivasPorNegocioAPIView, 
                     EstadisticasHeaderView, NegociosResumenView, CreateCajeroView, 
-                    ListAllCajerosView)
+                    ListAllCajerosView, PromocionUpdateCompleteView)
 
 # Usuarios Views
 from .views import (CodigoQRView, ListNegociosView, ListPromocionesView, SuscripcionANegocioView, 
@@ -38,6 +38,8 @@ urlpatterns = [
     path("promociones/estadisticas/", EstadisticasNegocioView.as_view(), name="estadisticas-negocio"),
     path("cajero/create/", CreateCajeroView.as_view(), name="create-cajero"),
     path("cajeros/list/", ListAllCajerosView.as_view(), name="list-all-cajeros"),
+    path("promociones/update/complete/<int:pk>/", PromocionUpdateCompleteView.as_view(), name="promocion-update-complete"),
+
 
     # Administradores
     path("solicitudes-negocio/list/", SolicitudNegocioListView.as_view(), name="solicitudes-negocio-list"),

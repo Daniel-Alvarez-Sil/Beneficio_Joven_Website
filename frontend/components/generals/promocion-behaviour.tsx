@@ -18,49 +18,41 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { AreaChart, Area, CartesianGrid, XAxis } from "recharts";
-import { getNegocioDetalle } from "@/actions/administradores/get-negocio-detalle";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-interface PromocionesChartProps {
-  id_negocio: number;
-}
+type CanjesRaw = Record<string, Record<string, number>>;
 
-export default function PromocionesChart({ id_negocio }: PromocionesChartProps) {
+export default function PromocionesChart({
+  canjesRaw,
+}: {
+  /** Raw object like { 'YYYY-MM-DD': { 'Promo A': 1, 'Promo B': 0 } } */
+  canjesRaw?: CanjesRaw;
+}) {
   const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!canjesRaw);
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const response = await getNegocioDetalle(id_negocio);
-        toast.success("Datos de negocio obtenidos");
-        console.log("Negocio detalle obtenido:", response);
-
-        const raw = response?.canjes_ultimos_7_dias;
-        if (!raw || Object.keys(raw).length === 0) {
-          console.warn("No hay datos de canjes en los últimos 7 días");
-          setData([]);
-          return;
-        }
-
-        // Transform to Recharts format
-        const days = Object.keys(raw).sort();
-        const transformed = days.map((day) => ({
-          date: day,
-          ...raw[day],
-        }));
-
-        setData(transformed);
-      } catch (error) {
-        console.error("Error loading promociones:", error);
-        toast.error("Error al cargar datos del negocio");
-      } finally {
+    try {
+      if (!canjesRaw || Object.keys(canjesRaw).length === 0) {
+        setData([]);
         setLoading(false);
+        return;
       }
+      const days = Object.keys(canjesRaw).sort();
+      const transformed = days.map((day) => ({
+        date: day,
+        ...canjesRaw[day],
+      }));
+      setData(transformed);
+    } catch (e) {
+      console.error(e);
+      toast.error("Error al preparar datos de canjes");
+      setData([]);
+    } finally {
+      setLoading(false);
     }
-    fetchData();
-  }, [id_negocio]);
+  }, [canjesRaw]);
 
   if (loading)
     return (
@@ -71,7 +63,7 @@ export default function PromocionesChart({ id_negocio }: PromocionesChartProps) 
 
   if (data.length === 0)
     return (
-      <Card>
+      <Card className="glass-alt text-white">
         <CardHeader>
           <CardTitle>Promociones – Últimos 7 días</CardTitle>
           <CardDescription>No hay datos disponibles.</CardDescription>
@@ -114,16 +106,8 @@ export default function PromocionesChart({ id_negocio }: PromocionesChartProps) 
                   x2="0"
                   y2="1"
                 >
-                  <stop
-                    offset="5%"
-                    stopColor={`var(--color-${promo})`}
-                    stopOpacity={0.8}
-                  />
-                  <stop
-                    offset="95%"
-                    stopColor={`var(--color-${promo})`}
-                    stopOpacity={0.1}
-                  />
+                  <stop offset="5%" stopColor={`var(--color-${promo})`} stopOpacity={0.8} />
+                  <stop offset="95%" stopColor={`var(--color-${promo})`} stopOpacity={0.1} />
                 </linearGradient>
               ))}
             </defs>
