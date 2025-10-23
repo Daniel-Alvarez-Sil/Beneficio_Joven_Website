@@ -4,6 +4,7 @@ from rest_framework import status, permissions, generics
 from .serializers import (AltaNegocioYAdminSerializer, PromocionListSerializer, 
                           DeleteUpdatePromocionSerializer, PromocionCreateSerializer,
                           EstadisticasParamsSerializer, AltaCajeroSerializer)
+from django.db.models import Q
 
 from django.db import transaction, IntegrityError
 
