@@ -5,7 +5,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from ...models import CodigoQR, Negocio, Promocion, AdministradorNegocio, Suscripcion, Categoria, Usuario, Apartado
 from login.models import User
 from django.utils import timezone
-from .serializers import NegocioSerializer, PromocionSerializer, CategoriaSerializer, UsuarioSerializer
+from .serializers import NegocioSerializer, PromocionSerializer, CategoriaSerializer, UsuarioSerializer, PromocionConApartadasSerializer
 from django.db.models import Q
 # Generics
 from rest_framework import generics
@@ -56,7 +56,7 @@ class ListPromocionesView(APIView):
             filters &= Q(id_categoria_titulo=categoria)
 
         promociones = Promocion.objects.all()
-        serializer = PromocionSerializer(promociones, many=True, context={'request': request})
+        serializer = PromocionConApartadasSerializer(promociones, many=True, context={'request': request})
         print(serializer.data)
         return Response(serializer.data, status=200)
 

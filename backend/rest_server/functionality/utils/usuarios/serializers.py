@@ -31,6 +31,16 @@ class PromocionSerializer(serializers.ModelSerializer):
         model = Promocion
         fields = '__all__'
 
+class PromocionConApartadasSerializer(serializers.ModelSerializer):
+    categorias = CategoriaWithPromocionSerializer(many=True, read_only=True)
+    negocio_nombre = serializers.CharField(source='id_negocio.nombre', read_only=True)
+    negocio_logo = serializers.ImageField(source='id_negocio.logo', read_only=True, allow_null=True)
+
+
+    class Meta:
+        model = Promocion
+        fields = '__all__'
+
     def to_representation(self, instance):
         request = self.context["request"]
         id_promocion = getattr(instance, 'id')
@@ -41,6 +51,7 @@ class PromocionSerializer(serializers.ModelSerializer):
             **super().to_representation(instance),
             "es_apartado": True if apartado_num > 0 else False
         }
+
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
