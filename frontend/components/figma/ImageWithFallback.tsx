@@ -1,3 +1,26 @@
+// components/figma/ImageWithFallback.tsx
+
+/**
+ * Componente: ImageWithFallback
+ * Descripción: Renderiza una imagen y, si falla la carga (`onError`), muestra un
+ *              contenedor con un SVG embebido (base64) como estado de error.
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ *
+ * Detalles:
+ * - Acepta todas las props de <img> vía `React.ImgHTMLAttributes<HTMLImageElement>`.
+ * - Mantiene un estado local `didError` para decidir si mostrar la imagen original
+ *   o el placeholder de error.
+ * - En caso de error, preserva `style`, `className` y el resto de atributos,
+ *   además de incluir `data-original-url` con la URL original fallida.
+ * - `ERROR_IMG_SRC` es un SVG en Base64, ligero y sin dependencias externas.
+ *
+ * Uso:
+ *   <ImageWithFallback src="/ruta.jpg" alt="Descripción" className="w-48 h-48" />
+ */
+
 import React, { useState } from 'react'
 
 const ERROR_IMG_SRC =

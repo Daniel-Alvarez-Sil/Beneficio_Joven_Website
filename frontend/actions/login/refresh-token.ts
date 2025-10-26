@@ -1,4 +1,24 @@
+// actions/login/refresh-token.ts
 'use server'
+
+/**
+ * Módulo: actions/login/refresh-token
+ * Descripción: Server Action para refrescar el token de acceso con el backend y actualizar la sesión.
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ *
+ * Flujo:
+ * 1) Realiza POST a `${API_HOST}/seguridad/refresh-token/` con el token actual en `Authorization: Bearer <token>`.
+ * 2) Si es exitoso, extrae `access_token`, `refresh_token`, `expires_in`, `token_type`, `scope`, `rol`.
+ * 3) Llama `updateSession` para persistir los nuevos valores en la sesión.
+ * 4) Devuelve el nuevo `access_token`; en error, registra en consola y retorna `false`.
+ *
+ * Notas:
+ * - Requiere variable de entorno `API_HOST`.
+ * - Maneja errores con `axios.isAxiosError` para distinguir errores HTTP.
+ */
 
 import axios from 'axios'
 import { updateSession } from '@/lib/login/session'

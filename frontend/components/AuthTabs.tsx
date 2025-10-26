@@ -1,3 +1,28 @@
+// components/AuthTabs.tsx
+
+/**
+ * Componente: AuthTabs
+ * Descripción: Contenedor con pestañas para alternar el inicio de sesión
+ *              entre "Administrador" y "Colaborador". Envuelve cada vista
+ *              dentro de `AuthLayout` y renderiza un `LoginForm` distinto
+ *              según la pestaña activa. Para colaboradores, expone un
+ *              callback para redirigir al flujo de registro.
+ *
+ * Props:
+ * - defaultTab?: "admin" | "colaborador" — pestaña inicial (por defecto "admin")
+ * - onAdminLogin(credentials): callback al autenticar admin
+ * - onColabLogin(credentials): callback al autenticar colaborador
+ * - onColabRegister?(): callback para navegar al registro de colaborador
+ *
+ * Detalles:
+ * - Usa `signup` (server action) como `action` para el `LoginForm`.
+ * - Los títulos/subtítulos de `AuthLayout` cambian según la pestaña activa.
+ * - UI basada en `Tabs` (shadcn/ui) con estilo tipo píldora.
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ */
 
 import { useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

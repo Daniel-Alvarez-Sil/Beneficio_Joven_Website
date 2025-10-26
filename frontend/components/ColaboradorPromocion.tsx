@@ -1,4 +1,76 @@
 // components/ColaboradorPromocion.tsx
+
+/**
+ * Componente: ColaboradorPromociones
+ * Descripción:
+ *   Módulo completo de gestión de promociones para el panel de Colaborador.
+ *   Permite listar, crear, editar, activar/desactivar y eliminar promociones,
+ *   incluyendo la carga y vista previa de una imagen, selección de rango de
+ *   fechas/horas y validaciones por tipo de promoción.
+ *
+ * Flujo general (UX):
+ *   1) Carga inicial: obtiene promociones con `getPromociones()` y muestra un grid de tarjetas.
+ *   2) Acciones por tarjeta:
+ *      - Toggle de estatus (UI optimista) vía `cambiarEstatusPromocion(id)`.
+ *      - Editar: abre modal con datos precargados y guarda con `editarPromocion`.
+ *      - Borrar: confirma en `AlertDialog` y ejecuta `deletePromocion(id)`.
+ *   3) Crear promoción:
+ *      - Modal con formulario (tipo, límites, fechas/horas, descuento/precio, imagen).
+ *      - Validaciones de negocio por tipo (“porcentaje”, “precio”, “2x1”, etc.).
+ *      - Envío como `FormData` a `createPromocion(fd)` con imagen opcional.
+ *      - Refresca la lista desde `getPromociones()` tras crear/editar.
+ *
+ * Características:
+ *   - UI con estilo glass, semántica clara y componentes shadcn/ui.
+ *   - Imagen: validación (JPG/PNG/WEBP, máx 5MB), vista previa y reemplazo en edición.
+ *   - Manejo de tiempo: opciones cada 30 min (HH:MM) y conversión a ISO UTC.
+ *   - “Tipo de promoción” afecta los campos numéricos (porcentaje/precio) y el prefijo
+ *      de descripción (p.ej., “2x1: …”, “Trae un amigo: …”).
+ *   - Optimistic UI: al alternar “activo” se actualiza visualmente y se revierte si falla.
+ *   - Reutiliza helpers para formato de fechas, normalización de descripciones, etc.
+ *
+ * Validaciones de negocio:
+ *   - `nombre` requerido.
+ *   - Rango de fechas/horas válido (inicio ≤ fin).
+ *   - Si `tipo="porcentaje"` → porcentaje > 0 y precio = 0.
+ *   - Si `tipo="precio"` → precio > 0 y porcentaje = 0.
+ *   - Tipos no numéricos (“2x1”, “trae_un_amigo”, “otro”): agregan prefijo a la descripción.
+ *
+ * Accesibilidad:
+ *   - Estructura semántica de sección y encabezados.
+ *   - Labels unidos a inputs y `aria-label` para acciones icónicas.
+ *   - Estados de carga y deshabilitado visibles (spinners, botones).
+ *
+ * Errores y estados:
+ *   - `loading`: spinner y mensaje.
+ *   - `error`: panel de alerta reutilizable en modales y listado.
+ *   - `busyId`/`deletingId`: deshabilitan acciones por ítem y muestran loader.
+ *
+ * Datos/Tipos:
+ *   - `Promocion` importado desde `@/actions/colaboradores/get-promociones`.
+ *   - `TipoPromo`: "porcentaje" | "precio" | "2x1" | "trae_un_amigo" | "otro".
+ *   - `idNegocio` NO se envía en create/update (lo resuelve el backend por sesión/token).
+ *
+ * Dependencias (acciones de servidor):
+ *   - `getPromociones()`                     → listado inicial y refresh tras mutaciones.
+ *   - `cambiarEstatusPromocion(id:number)`   → toggle activo/inactivo (optimista).
+ *   - `deletePromocion(id:number)`           → eliminación con confirmación.
+ *   - `createPromocion(fd:FormData)`         → creación (usa FormData y archivo opcional).
+ *   - `editarPromocion(id:number, fd:FormData)` → actualización con posible reemplazo de imagen.
+ *
+ * Formato de fechas:
+ *   - Se muestran localizadas para es-MX y zona “America/Mexico_City”.
+ *   - Se envían al backend en ISO-8601 UTC (sin milisegundos).
+ *
+ * Seguridad y rendimiento:
+ *   - No expone tokens; las acciones de servidor manejan el auth (withAuthRetry).
+ *   - Evita fugas de memoria liberando URLs de `createObjectURL` al desmontar/limpiar.
+ *   - Reintenta/recarga lista tras operaciones críticas para mantener consistencia.
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -66,6 +138,7 @@ interface ColaboradorDashboardProps {
   idNegocio?: string; // no lo mandaremos en el POST
 }
 
+/** Formatea un ISO a fecha/hora local MX para mostrar en tarjetas. */
 function formatDateMX(iso: string) {
   try {
     return new Date(iso).toLocaleString("es-MX", {
@@ -78,12 +151,14 @@ function formatDateMX(iso: string) {
   }
 }
 
+/** Muestra badge de precio fijo cuando aplique. */
 function PrecioBadge({ precio }: { precio: string }) {
   const v = Number(precio);
   if (!isFinite(v) || v <= 0) return null;
   return <Badge variant="secondary">${v.toFixed(2)} off</Badge>;
 }
 
+/** Muestra badge de porcentaje cuando el tipo sea “porcentaje”. */
 function PorcentajeBadge({
   tipo,
   porcentaje,
@@ -97,6 +172,10 @@ function PorcentajeBadge({
   return <Badge>-{v}%</Badge>;
 }
 
+/**
+ * Une una fecha (Date) con una hora (HH:MM) y devuelve ISO UTC.
+ * Retorna null si faltan valores.
+ */
 function toUtcIsoFromDateAndTime(date: Date | null, timeHHMM: string): string | null {
   if (!date || !timeHHMM) return null;
   const [hhStr, mmStr] = timeHHMM.split(":");
@@ -107,19 +186,19 @@ function toUtcIsoFromDateAndTime(date: Date | null, timeHHMM: string): string | 
   return d.toISOString();
 }
 
-// ISO sin milisegundos
+/** Quita milisegundos del ISO para cumplir con el backend. */
 function stripMs(iso: string) {
   return iso.replace(/\.\d{3}Z$/, "Z");
 }
 
-// Build 30-minute options "HH:MM"
+/** Opciones de tiempo cada 30 minutos (00:00–23:30). */
 const TIME_OPTIONS: string[] = Array.from({ length: 24 * 2 }, (_, i) => {
   const h = String(Math.floor(i / 2)).padStart(2, "0");
   const m = i % 2 === 0 ? "00" : "30";
   return `${h}:${m}`;
 });
 
-// === Tipo de promoción (solo UX/validación/prefijo) ===
+/** Opciones y etiquetas de tipo de promoción (solo para UX/validación). */
 const TIPO_OPCIONES = [
   { value: "porcentaje", label: "Descuento (%)" },
   { value: "precio", label: "Precio fijo (MXN)" },
@@ -136,6 +215,10 @@ const TIPO_LABEL: Record<TipoPromo, string> = {
   otro: "Otra",
 };
 
+/**
+ * Deducción aproximada del tipo de promo a partir de los campos existentes.
+ * Útil para precargar el modal de edición.
+ */
 function inferTipoFromPromo(p: any): TipoPromo {
   const pct = Number(p.porcentaje || 0);
   const prc = Number(p.precio || 0);
@@ -218,6 +301,10 @@ export function ColaboradorPromociones({
     };
   }, [imagenPreview]);
 
+  /**
+   * Alterna el estatus activo/inactivo con UI optimista.
+   * Reversa el cambio si `cambiarEstatusPromocion` falla.
+   */
   const handleToggleActivo = async (id: number) => {
     setError(null);
     setBusyId(id);
@@ -240,7 +327,7 @@ export function ColaboradorPromociones({
     setBusyId(null);
   };
 
-
+  /** Elimina una promoción tras confirmación en el AlertDialog. */
   const handleDelete = async (id: number) => {
     setError(null);
     setDeletingId(id);
@@ -263,7 +350,10 @@ export function ColaboradorPromociones({
     if (tipo === "precio") setPorcentaje("0.00");
   };
 
-  // Imagen: validación + preview
+  /**
+   * Maneja selección de imagen con validaciones de tipo/tamaño
+   * y genera URL de vista previa temporal.
+   */
   const onSelectImagen: React.ChangeEventHandler<HTMLInputElement> = (e) => {
     const file = e.target.files?.[0] ?? null;
     if (!file) {
@@ -291,6 +381,7 @@ export function ColaboradorPromociones({
     setImagenPreview(url);
   };
 
+  /** Restablece todos los campos del formulario y limpia la vista previa. */
   const resetForm = () => {
     setNombre("");
     setDescripcion("");
@@ -313,6 +404,11 @@ export function ColaboradorPromociones({
   };
 
   // ---------------- CREAR ----------------
+  /**
+   * Crea una promoción a partir del formulario actual.
+   * Valida campos por tipo, construye `FormData` y envía `createPromocion`.
+   * Al terminar, refresca el listado con `getPromociones`.
+   */
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -400,6 +496,10 @@ export function ColaboradorPromociones({
   };
 
   // ---------------- EDITAR ----------------
+  /**
+   * Abre el modal de edición con datos precargados.
+   * Normaliza descripción (quita prefijos “2x1:”, “Trae un amigo:”, “Otra:”).
+   */
   const openEditWith = (p: any) => {
     setEditingId(p.id);
 
@@ -451,6 +551,10 @@ export function ColaboradorPromociones({
     setOpenEdit(true);
   };
 
+  /**
+   * Actualiza la promoción en edición:
+   * valida campos, arma `FormData` (incluye `id_promocion`) y envía con `editarPromocion`.
+   */
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingId == null) return;

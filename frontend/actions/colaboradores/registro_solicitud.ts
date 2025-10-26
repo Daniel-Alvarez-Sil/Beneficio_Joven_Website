@@ -1,6 +1,27 @@
 // actions/colaboradores/registro_solicitud.ts
 'use server';
 
+/**
+ * Módulo: actions/colaboradores/registro_solicitud
+ * Descripción: Server Action que registra una solicitud de alta de negocio + administrador.
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ *
+ * Flujo general:
+ * 1) Convierte (si aplica) un dataURL base64 de imagen/logo a `File`.
+ * 2) Construye un `FormData` con los campos anidados de administrador y negocio.
+ * 3) Envía la solicitud vía `fetch` con método POST al endpoint:
+ *      `${API_HOST}/functionality/administradores-negocio/`
+ * 4) Retorna un objeto `{ ok, status, data? | error? }` normalizado.
+ *
+ * Notas:
+ * - No se fija manualmente el `Content-Type` para permitir el `boundary` correcto.
+ * - Los campos anidados usan claves tipo `administrador.campo` y `negocio.campo`.
+ * - Se admite `FormData` ya armado o un `RegistroPayload` (se construye internamente).
+ */
+
 import type { RegistroPayload } from '@/components/types/registro';
 
 const apiHost = (process.env.API_HOST ?? '').replace(/\/+$/, '');
@@ -72,6 +93,11 @@ function buildFormData(payload: RegistroPayload): FormData {
 
 type Resp = { ok: boolean; status: number; data?: any; error?: string };
 
+/**
+ * Registra una solicitud de alta de negocio + administrador.
+ * @param formOrJson `FormData` ya preparado o `RegistroPayload` (se convertirá a `FormData`).
+ * @returns {Promise<Resp>} Objeto con `ok`, `status` y `data`/`error`.
+ */
 export async function registrarSolicitud(formOrJson: FormData | RegistroPayload): Promise<Resp> {
   try {
     const body =

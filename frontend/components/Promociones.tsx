@@ -1,3 +1,50 @@
+// components/Promociones.tsx
+
+/**
+ * Componente: ColaboradorDashboard
+ * Descripción:
+ *   Vista de sólo lectura para que el colaborador consulte sus promociones.
+ *   Carga el listado desde una Server Action y lo muestra en tarjetas con
+ *   estado, fechas, contadores de canje y “badges” de descuento/precio.
+ *
+ * Flujo general:
+ *   1) Montaje: obtiene promociones con `getPromociones()` y maneja loading/error.
+ *   2) Render:
+ *      - Header fijo con saludo y botón de cerrar sesión (`logout`).
+ *      - Grid de tarjetas con nombre, descripción, rango de fechas y métricas.
+ *
+ * Props:
+ *   - onLogout: () => void        → Handler externo (no se usa directamente; el botón usa `logout`).
+ *   - colaboradorName: string     → Muestra saludo en el header.
+ *   - idNegocio?: string          → Dependencia para re-disparar la carga si cambia (no se envía).
+ *
+ * Estados internos:
+ *   - loading: boolean            → Indicador de carga.
+ *   - error: string | null        → Mensaje de error cuando la carga falla.
+ *   - promos: Promocion[]         → Datos a renderizar.
+ *
+ * Accesibilidad:
+ *   - Estructura semántica (header, main, section con `aria-label`).
+ *   - Estados “loading”/“error” con mensajes legibles.
+ *
+ * Errores y estados vacíos:
+ *   - Muestra spinner mientras `loading`.
+ *   - Muestra mensaje de error si `error` existe.
+ *   - Muestra estado vacío cuando no hay promociones.
+ *
+ * Utilidades:
+ *   - formatDateMX(iso): formatea a es-MX con zona America/Mexico_City.
+ *   - PrecioBadge / PorcentajeBadge: badges condicionales según `precio`/`tipo`.
+ *
+ * Dependencias (acciones de servidor):
+ *   - getPromociones(): Promise<Promocion[]>
+ *   - logout: Server Action para cerrar sesión desde el <form>.
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ */
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -14,6 +61,7 @@ interface ColaboradorDashboardProps {
   idNegocio?: string;
 }
 
+/** Formatea un ISO a fecha/hora local MX para mostrar en tarjetas. */
 function formatDateMX(iso: string) {
   try {
     return new Date(iso).toLocaleString("es-MX", {
@@ -26,12 +74,14 @@ function formatDateMX(iso: string) {
   }
 }
 
+/** Badge de precio fijo cuando el valor es > 0. */
 function PrecioBadge({ precio }: { precio: string }) {
   const v = Number(precio);
   if (!isFinite(v) || v <= 0) return null;
   return <Badge variant="secondary">${v.toFixed(2)} off</Badge>;
 }
 
+/** Badge de porcentaje cuando `tipo` es "porcentaje" y el valor es > 0. */
 function PorcentajeBadge({ tipo, porcentaje }: { tipo: string | null; porcentaje: string }) {
   if (tipo !== "porcentaje") return null;
   const v = Number(porcentaje);
@@ -45,8 +95,8 @@ export function ColaboradorDashboard({
   idNegocio = "3",
 }: ColaboradorDashboardProps) {
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [promos, setPromos] = useState<Promocion[]>([]);
+  const [error,   setError]   = useState<string | null>(null);
+  const [promos,  setPromos]  = useState<Promocion[]>([]);
 
   useEffect(() => {
     let mounted = true;

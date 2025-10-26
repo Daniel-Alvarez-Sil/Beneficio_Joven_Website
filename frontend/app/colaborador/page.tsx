@@ -1,4 +1,21 @@
+// app/colaborador/page.tsx
 'use client';
+
+/**
+ * Página: /colaborador
+ * Descripción: Entrypoint del panel para Colaborador. Muestra un header y un layout con Tabs
+ *              (Dashboard, Promociones, Cajero) renderizando sus componentes correspondientes.
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ *
+ * Notas:
+ * - `use client`: este archivo se ejecuta en el cliente (React).
+ * - `currentUser` está inicializado con un mock; en producción debe venir de tu store/auth.
+ * - `idNegocio` está hardcodeado como '3' a modo de placeholder.
+ * - El diseño aplica un fondo tipo "aurora" y tabs con estilo glass.
+ */
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -23,7 +40,7 @@ export default function App() {
     router.push('/');
   };
 
-  const idNegocio = '3'; // ⬅️ cámbialo cuando lo obtengas de tu store/auth
+  const idNegocio = '3';
 
   return (
     <div className="dark relative min-h-screen text-white">

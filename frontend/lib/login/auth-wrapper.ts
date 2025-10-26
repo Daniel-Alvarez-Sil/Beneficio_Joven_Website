@@ -1,5 +1,28 @@
-// utils/with-auth-retry.ts
+// lib/login/auth-wrapper.ts
 'use server'
+
+/**
+ * Módulo: lib/login/auth-wrapper
+ * Descripción: Helper para ejecutar llamadas al backend autenticadas con Bearer token,
+ *              con reintento automático cuando el token es inválido o expiró.
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ *
+ * Flujo de `withAuthRetry`:
+ * 1) Obtiene la sesión actual con `verifySession()` y extrae el `token`.
+ * 2) Intenta la llamada `apiCall(token)` hasta 2 veces:
+ *    - Si la llamada falla con 401 y uno de los mensajes de autenticación conocidos,
+ *      intenta refrescar el token con `refreshToken(token)` y reintenta.
+ *    - Si no es error de autenticación o ya se usó el reintento, registra el error y retorna `{ error: "Request failed" }`.
+ * 3) Si se logra obtener respuesta válida, retorna `response.data`.
+ * 4) Si el refresh falla o no hay token válido, retorna un objeto `{ error: ... }`.
+ *
+ * Notas:
+ * - No modifica la firma ni la lógica original; únicamente se documenta.
+ * - Los mensajes de error devueltos son genéricos y aptos para consumo por capas superiores.
+ */
 
 import { verifySession } from '@/lib/login/dal';
 import { refreshToken } from '@/actions/login/refresh-token';

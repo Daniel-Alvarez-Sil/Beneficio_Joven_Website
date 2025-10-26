@@ -1,4 +1,31 @@
+// components/admin/NegociosGrid.tsx
 "use client";
+
+/**
+ * Componente: NegociosGrid
+ * Descripción: Grid de tarjetas de negocios con búsqueda, creación de colaborador (modal)
+ *              y vista detallada de un negocio (modal con dos cards + gráfica).
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ *
+ * Secciones principales:
+ * - Tipos locales (`NegocioResumen`, `NegocioDetalleResponse`, etc.).
+ * - <NegocioDetalleDialog/>: Modal con ficha del negocio y su administrador + gráfica de canjes.
+ * - Componente principal: carga lista de negocios, filtrado por texto, abrir detalle, crear colaborador.
+ *
+ * Flujo:
+ * 1) `fetchNegocios` llama `/api/negocios-resumen` y guarda en `negocios`.
+ * 2) `filtered` memoiza negocios filtrados por `q` (query de búsqueda).
+ * 3) `handleOpenDetalle(id)`: abre modal, pide detalle vía `getNegocioDetalle(id)` y setea `detalle`.
+ * 4) `handleSubmit(e)`: construye `FormData` a partir del formulario "Nuevo colaborador" y POST a `/api/create-colaborador`.
+ *
+ * Notas:
+ * - La tarjeta de detalle muestra KPIs (promociones/canjes), datos generales, dirección y enlaces (sitio/maps).
+ * - La gráfica usa `<PromocionesChart canjesRaw={detalle.canjes_ultimos_7_dias} />`.
+ * - El estilo usa clases utilitarias Tailwind con un look “glass” y fondo oscuro.
+ */
 
 import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -36,6 +63,7 @@ import PromocionesChart from "@/components/generals/promocion-behaviour";
    Types
 ========================================================= */
 
+/** Resumen mostrado en la cuadrícula principal. */
 interface NegocioResumen {
   id: number;
   nombre: string;
@@ -53,6 +81,7 @@ interface NegocioResumen {
 
 type CanjesRaw = Record<string, Record<string, number>>;
 
+/** Respuesta del detalle del negocio, usada dentro del modal. */
 interface NegocioDetalleResponse {
   negocio: {
     id: number;
@@ -80,7 +109,7 @@ interface NegocioDetalleResponse {
     apellido_paterno: string | null;
     apellido_materno: string | null;
     usuario: string;
-    contrasena?: string;
+    contrasena?: string; // ⚠️ Si llega, no mostrar en UI
     id_negocio: number;
   } | null;
   num_promociones: number;
@@ -92,6 +121,13 @@ interface NegocioDetalleResponse {
    Detail dialog (two glass cards: negocio + administrador)
 ========================================================= */
 
+/**
+ * Modal de detalle del negocio.
+ * Props:
+ * - open/onOpenChange: control del diálogo
+ * - loading: spinner mientras se obtiene el detalle
+ * - detalle: datos del negocio + admin + kpis + serie
+ */
 function NegocioDetalleDialog({
   open,
   onOpenChange,
@@ -327,6 +363,11 @@ function NegocioDetalleDialog({
    Main grid with "Ver detalles" action
 ========================================================= */
 
+/**
+ * Componente principal:
+ * - Renderiza buscador, cards de negocios y acciones (detalle / crear colaborador).
+ * - Administra estados de carga, modales y formulario de creación.
+ */
 export default function NegociosGrid() {
   const [negocios, setNegocios] = useState<NegocioResumen[]>([]);
   const [loading, setLoading] = useState(false);
@@ -342,6 +383,7 @@ export default function NegociosGrid() {
   const [submitting, setSubmitting] = useState(false);
   const [file, setFile] = useState<File | null>(null);
 
+  /** Carga inicial de la lista de negocios. */
   async function fetchNegocios() {
     try {
       setLoading(true);
@@ -360,6 +402,7 @@ export default function NegociosGrid() {
     fetchNegocios();
   }, []);
 
+  /** Filtrado por texto libre (nombre/estatus/admin). */
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     if (!needle) return negocios;
@@ -380,6 +423,7 @@ export default function NegociosGrid() {
     });
   }, [q, negocios]);
 
+  /** Abre el modal de detalle y consume el servicio de detalle por ID. */
   async function handleOpenDetalle(id_negocio: number) {
     try {
       setDetailLoading(true);
@@ -405,6 +449,12 @@ export default function NegociosGrid() {
     }
   }
 
+  /**
+   * Envía el formulario "Nuevo colaborador".
+   * - Construye `FormData` con las claves anidadas `administrador.*` y `negocio.*`.
+   * - Anexa `file` (si se seleccionó).
+   * - POST a `/api/create-colaborador`.
+   */
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formEl = e.currentTarget;

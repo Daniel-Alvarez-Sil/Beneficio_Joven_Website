@@ -1,5 +1,24 @@
-// /actions/colaboradores/get-cajeros.ts
+// actions/colaboradores/get-cajeros.ts
 'use server';
+
+/**
+ * Módulo: get-cajeros
+ * Descripción: Server Action que obtiene la lista de cajeros asociados al negocio autenticado.
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ *
+ * Detalles:
+ * - Usa `withAuthRetry` para inyectar el Bearer token y manejar reintentos de autenticación.
+ * - Realiza un GET a `/functionality/cajeros/list/`.
+ * - Si el wrapper devuelve un `AxiosResponse`, se retorna `res.data`; si ya regresa los datos, se retorna `res` tal cual.
+ *
+ * Notas importantes:
+ * - Campo sensible: `contrasena` llega desde el backend. ⚠️ **No** se debe mostrar en la UI ni registrar en logs.
+ * - Requiere la variable de entorno `API_HOST`.
+ * - Autenticación: `Authorization: Bearer <token>` provisto por `withAuthRetry`.
+ */
 
 import axios from 'axios';
 import { withAuthRetry } from '@/lib/login/auth-wrapper';

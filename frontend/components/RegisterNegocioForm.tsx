@@ -1,3 +1,67 @@
+// components/RegisterNegocioForm.tsx
+
+/**
+ * Componente: RegisterNegocioForm
+ * Descripción:
+ *   Paso 2 del registro público de Colaborador/Negocio. Completa los datos del negocio,
+ *   anexa (opcionalmente) un logo y envía la solicitud a la API interna `/api/create-colaborador`,
+ *   combinando la información del administrador capturada en el Paso 1 (leída de localStorage)
+ *   con la del negocio (Paso 2).
+ *
+ * Flujo general (UX):
+ *   1) Montaje:
+ *      - Lee `registro_admin` desde localStorage. Si no existe, redirige a `/registro/colaborador`.
+ *      - Restaura un borrador de negocio desde `registro_negocio_tmp` (autosave).
+ *   2) Edición:
+ *      - Cada cambio se persiste en `registro_negocio_tmp` (incluye nombre del archivo seleccionado).
+ *      - La imagen (logo) se guarda como DataURL (base64) para vista previa/almacenamiento temporal.
+ *   3) Envío:
+ *      - Construye un `FormData` con subcampos `administrador.*` y `negocio.*`.
+ *      - Convierte el `logo` (base64) a `Blob` para enviarlo como `file` (opcional).
+ *      - Envía POST a `/api/create-colaborador`.
+ *      - Si la creación es exitosa, limpia localStorage y navega a `/registro/gracias`.
+ *
+ * API / Contrato de envío:
+ *   - ADMIN (derivado del Paso 1):
+ *     administrador.correo, administrador.telefono, administrador.nombre,
+ *     administrador.apellido_paterno, administrador.apellido_materno,
+ *     administrador.usuario (derivado del correo), administrador.contrasena
+ *   - NEGOCIO:
+ *     negocio.correo, negocio.telefono, negocio.nombre, negocio.rfc,
+ *     negocio.sitio_web, negocio.estatus, negocio.cp, negocio.numero_ext,
+ *     negocio.numero_int, negocio.colonia, negocio.municipio, negocio.estado,
+ *     negocio.url_maps (tomado de `maps_url`)
+ *   - Archivo opcional:
+ *     file (logo como `File`), creado a partir de `form.logo` (base64)
+ *   - Bandera:
+ *     creado_por_admin: 'false' (flujo público)
+ *
+ * Persistencia local (autosave):
+ *   - Claves: `registro_admin` (Paso 1) y `registro_negocio_tmp` (Paso 2).
+ *   - Además se almacena `__logoFileName` para recordar el nombre del archivo.
+ *
+ * Validaciones/UI:
+ *   - Requeridos: nombre, rfc, teléfono, correo, cp, número exterior, colonia, municipio, estado.
+ *   - `maps_url` opcional (se mapea a `negocio.url_maps`).
+ *   - Límite de tamaño del logo: ~2.5MB (2.4MB comprobados).
+ *   - Botón de envío muestra toast simple de éxito.
+ *
+ * Accesibilidad:
+ *   - Labels asociados a inputs (`htmlFor`/`id`).
+ *   - Input de archivo oculto con `label` clickeable y áreas accesibles.
+ *   - Mensajes claros de error mediante `alert()` para condiciones básicas.
+ *
+ * Seguridad y notas:
+ *   - Este paso requiere que la información sensible del admin (incl. contraseña) haya sido
+ *     guardada previamente en localStorage por el Paso 1. Considera riesgos de persistir contraseñas
+ *     en localStorage (en producción, evaluar alternativas o cifrado).
+ *   - La conversión `fetch(dataURL)` → `Blob` evita subir el base64 directamente.
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ */
+
 'use client';
 
 import { useEffect, useState } from 'react';

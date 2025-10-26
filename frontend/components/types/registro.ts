@@ -1,4 +1,19 @@
 // components/types/registro.ts
+
+/**
+ * Archivo de tipos para el flujo de registro de negocios/administradores.
+ *
+ * Contenido:
+ * - AdminInput: datos del administrador del negocio.
+ * - EstatusNegocio: estados posibles del negocio en el flujo.
+ * - NegocioInput: datos del negocio (contacto, ubicación y archivo).
+ * - RegistroPayload: payload completo que agrupa negocio + administrador.
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ */
+
 export interface AdminInput {
   correo: string;
   telefono: string;
