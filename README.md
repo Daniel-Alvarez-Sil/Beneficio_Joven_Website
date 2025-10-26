@@ -44,9 +44,14 @@ Después, en la pestaña de networking, asignar una IP estática a tu instancia.
 Ingresar a https://platform.openai.com/api-keys, crear una llave para la API de Open AI y pagar 5 dolares. 
 
 ### 1.3. Configuración de entorno. 
-Después, se debe conectar a la instancia creada para el backend y ejecutar los siguientes comandos: 
+Después, se debe conectar a la instancia creada para el backend
+<img width="1323" height="755" alt="image" src="https://github.com/user-attachments/assets/a903f371-9345-4d1b-9dfa-c0bf3135b65f" />
+
+
+Una vez conectado, ejecutar los siguientes comandos: 
 ```
 git clone https://github.com/Daniel-Alvarez-Sil/Beneficio_Joven_Website.git
+cd Beneficio_Joven_Website
 cd backend
 # Crear entorno virtual
 python -m venv venv
@@ -111,13 +116,260 @@ tmux
 python3 manage.py runserver 0.0.0.0:8000
 ```
 
-## 2. Frontend (Sitio web). 
 
-### 2.1. Levantar instancia de AWS. 
+## 2. Frontend (Sitio web)
 
-### 2.2. Despliegue. 
+### 2.1. Levantar instancia de AWS
+Crear una instancia para levantar el frontend.  
+<img width="1846" height="921" alt="image" src="https://github.com/user-attachments/assets/c9e23589-0817-4212-a7aa-c9f710d70a93" />
+<img width="1856" height="918" alt="image" src="https://github.com/user-attachments/assets/93d847e5-31a7-4da4-97bb-69fd377e2cbb" />
 
-### 2.3. Exponer sitio web. 
+Después, en la pestaña de **Networking**, asignar una **IP estática** a tu instancia.  
+<img width="1820" height="723" alt="image" src="https://github.com/user-attachments/assets/f3ae01da-d092-4831-9c4c-d027904a5b04" />
 
+> **Importante (Seguridad y puertos):** En Networking / firewall habilita **80 (HTTP)** y **443 (HTTPS)** para tu instancia.
 
+---
+
+### 2.2. Despliegue
+Conectarse a la instancia creada.  
+<img width="1323" height="755" alt="image" src="https://github.com/user-attachments/assets/964b57cf-3097-46bc-9166-49a0cbb17b17" />
+
+Ejecutar los siguientes comandos:
+```bash
+# Actualiza el sistema
+sudo apt-get update
+
+# Node.js 18 LTS
+curl -fsSL https://deb.nodesource.com/setup_18.x -o nodesource_setup.sh
+sudo -E bash nodesource_setup.sh
+sudo apt-get install -y nodejs
+
+# PM2 para producción (manejo de procesos)
+sudo npm install -g pm2
+
+# Clona el repo y construye
+git clone https://github.com/Daniel-Alvarez-Sil/Beneficio_Joven_Website.git
+cd Beneficio_Joven_Website/frontend
+npm i
+npm run build
+
+# Arranca con PM2
+pm2 start npm --name "frontend" -- start
+
+# Haz persistente PM2 al reinicio
+pm2 save
+pm2 startup systemd -u $USER --hp $HOME
+# Copia y ejecuta el comando que imprime (si aparece) para habilitar el servicio
+````
+
+Instala **Nginx** como proxy inverso (temporalmente en HTTP para probar):
+
+```bash
+sudo apt-get install -y nginx
+
+# (Opcional) Firewall UFW
+sudo ufw allow 'Nginx Full'
+sudo ufw allow OpenSSH
+# sudo ufw enable   # solo si aún no está habilitado
+
+# Edita el sitio por defecto (temporal)
+sudo nano /etc/nginx/sites-available/default
+```
+
+Pega esto y guarda:
+
+```nginx
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    server_name _;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+Valida y recarga:
+
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+Prueba en el navegador con la **IP pública**: `http://TU_IP`. Si carga, continúa con dominio y HTTPS.
+
+---
+
+### 2.3. Conectar dominio (DNS)
+
+1. En tu **registrar** (donde compraste el dominio) crea un **registro A**:
+
+   * **Tipo:** A
+   * **Host:** `@` (raíz)
+   * **Valor:** *IP estática pública de la instancia*
+   * **TTL:** 5–15 min (o automático)
+2. (Opcional) Crea un **CNAME** para `www` que apunte al dominio raíz:
+
+   * **Tipo:** CNAME
+   * **Host:** `www`
+   * **Valor:** `tudominio.com.`
+
+Verifica propagación DNS:
+
+```bash
+nslookup tudominio.com
+# o
+dig tudominio.com +short
+```
+
+---
+
+### 2.4. HTTPS con Let’s Encrypt (Certbot)
+
+Instala Certbot con el plugin de Nginx y prepara un server block para tu dominio:
+
+```bash
+sudo apt-get install -y certbot python3-certbot-nginx
+
+# Crea un archivo de sitio para tu dominio
+sudo nano /etc/nginx/sites-available/tudominio.com
+```
+
+Pega esta **configuración base HTTP** (ajusta `tudominio.com` y `www.tudominio.com`), guarda y cierra:
+
+```nginx
+server {
+    listen 80;
+    listen [::]:80;
+    server_name tudominio.com www.tudominio.com;
+
+    # Ruta ACME (por si se requiere)
+    location /.well-known/acme-challenge/ { root /var/www/html; }
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+Habilita el sitio y deshabilita el default (si quieres apuntar solo al dominio):
+
+```bash
+sudo ln -s /etc/nginx/sites-available/tudominio.com /etc/nginx/sites-enabled/tudominio.com
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+Emite y configura **HTTPS** con redirección automática:
+
+```bash
+sudo certbot --nginx -d tudominio.com -d www.tudominio.com --redirect -m tu-email@dominio.com --agree-tos -n
+```
+
+Comprueba renovación automática:
+
+```bash
+sudo systemctl status certbot.timer
+sudo certbot renew --dry-run
+```
+
+---
+
+### 2.5. Ajustes de producción recomendados
+
+**Variables de entorno (Next.js)**
+
+```bash
+# Ejemplos (ajusta a tu caso)
+echo 'NEXT_PUBLIC_BASE_URL=https://tudominio.com' | sudo tee -a .env
+echo 'NEXTAUTH_URL=https://tudominio.com' | sudo tee -a .env  # si aplica
+```
+
+Reconstruye si cambias `.env`:
+
+```bash
+npm run build
+pm2 restart frontend
+```
+
+**Ciclo de despliegue**
+
+```bash
+pm2 status
+pm2 logs frontend --lines 100
+
+# Actualizar app
+git pull
+npm i
+npm run build
+pm2 restart frontend
+```
+
+**Logs Nginx**
+
+```
+/var/log/nginx/access.log
+/var/log/nginx/error.log
+```
+
+---
+
+### 2.6. Configuración final esperada (Nginx + SSL)
+
+Tu archivo `/etc/nginx/sites-available/tudominio.com` quedará similar a esto (Certbot lo genera/ajusta):
+
+```nginx
+# Redirección HTTP -> HTTPS
+server {
+    listen 80;
+    listen [::]:80;
+    server_name tudominio.com www.tudominio.com;
+    return 301 https://$host$request_uri;
+}
+
+# Sitio en HTTPS
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name tudominio.com www.tudominio.com;
+
+    ssl_certificate /etc/letsencrypt/live/tudominio.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/tudominio.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+
+    # Proxy a Next.js
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # (Opcional) Estáticos con caché fuerte
+    # location /_next/static/ {
+    #     alias /ruta/a/.next/static/;
+    #     access_log off;
+    #     expires 7d;
+    #     add_header Cache-Control "public, max-age=604800, immutable";
+    # }
+}
+```
+
+---
 
