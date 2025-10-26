@@ -109,8 +109,9 @@ OAUTH_CLIENT_SECRET=null
 ...
 ```
 
-### 1.5. Prender servidor. 
+### 1.5. Migración inicial y prender servidor. 
 ```
+python manage.py migrate
 sudo apt install tmux -y
 tmux
 python3 manage.py runserver 0.0.0.0:8000
