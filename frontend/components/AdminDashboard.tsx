@@ -1,4 +1,20 @@
+// components/AdminDashboard.tsx
 "use client";
+
+/**
+ * Componente: AdminDashboard
+ * Descripción: Panel principal para administradores. Contiene:
+ *   - Header del área administrativa.
+ *   - Navegación por pestañas (Dashboard / Colaboradores / Solicitudes).
+ *   - Contenidos:
+ *       • DashboardOverview: métricas y gráficas generales.
+ *       • NegociosGrid: gestión/visualización de negocios y creación de colaborador.
+ *       • SolicitudesList: revisión de solicitudes (aprobar/rechazar).
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ */
 
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

@@ -1,3 +1,26 @@
+// components/ColaboradorHeader.tsx
+
+/**
+ * Componente: ColaboradorHeader
+ * Descripción:
+ *   Barra superior fija (sticky) para el panel de colaborador. Muestra el
+ *   título del panel y un botón para cerrar sesión (form action -> logout).
+ *
+ * Características:
+ *   - Estilos “glass / backdrop-blur” para integrarse con el look & feel global.
+ *   - Mantiene la jerarquía visual con un icono/monograma y saludo.
+ *   - Botón accesible con ícono (LogOut) y texto “Cerrar sesión”.
+ *   - Usa acción de servidor `logout` desde '@/actions/login/auth'.
+ *
+ * Accesibilidad:
+ *   - Contrastes y estados hover adecuados en botón.
+ *   - Estructura semántica con <header>.
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ */
+
 "use client";
 
 import { Button } from "./ui/button";

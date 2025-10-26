@@ -1,4 +1,27 @@
+// actions/colaboradores/get-promociones.ts
 "use server";
+
+/**
+ * Módulo: actions/colaboradores/get-promociones
+ * Descripción: Server Action que obtiene la lista de promociones del backend con autenticación.
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ *
+ * Flujo:
+ * 1) Verifica que exista la variable de entorno `API_HOST`.
+ * 2) Construye la URL del endpoint `/functionality/list/promociones/`.
+ * 3) Usa `withAuthRetry` para hacer un `GET` autenticado con Bearer token.
+ * 4) Tolera que el wrapper regrese `AxiosResponse` (usando `.data`) o directamente los datos.
+ * 5) Valida que la respuesta sea un arreglo; si no lo es, lanza un error.
+ * 6) Retorna el arreglo tipado como `Promocion[]`.
+ *
+ * Notas:
+ * - Este módulo exporta el tipo `Promocion` para consumo en componentes cliente.
+ * - Si el backend soporta filtros por negocio, se podrían añadir como query params a `url`.
+ * - Errores del backend se normalizan para ofrecer un mensaje claro.
+ */
 
 import axios from "axios";
 import { withAuthRetry } from "@/lib/login/auth-wrapper";

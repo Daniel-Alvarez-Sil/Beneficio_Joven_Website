@@ -1,4 +1,31 @@
-// /components/ColaboradorCajero.tsx
+// components/ColaboradorCajero.tsx
+
+/**
+ * Componente: ColaboradorCajero
+ * Descripción: Gestión de cajeros para el colaborador. Permite:
+ *   - Listar cajeros (con búsqueda local).
+ *   - Crear un nuevo cajero en un diálogo modal con validación mínima.
+ *   - Copiar correo/teléfono al portapapeles desde cada tarjeta.
+ *
+ * Props:
+ * - colaboradorName: nombre del colaborador que usa el panel (solo display).
+ * - idNegocio?: si se provee, se agrega al payload al crear un cajero.
+ *
+ * Flujo:
+ * 1) `useEffect` carga cajeros vía `getCajeros`, normaliza (únicos, ordenados).
+ * 2) `filtered` aplica filtro por texto (`q`).
+ * 3) El diálogo “Nuevo cajero” maneja estados de formulario y valida campos obligatorios.
+ * 4) `handleCreateCajero` llama `createCajero`, refetch de lista y reseteo de formulario.
+ *
+ * Notas:
+ * - No se muestra la contraseña en UI (aunque llega del backend en el tipo `Cajero`).
+ * - Se utilizan componentes de shadcn/ui y algunos íconos de lucide-react.
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ */
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";

@@ -1,3 +1,25 @@
+// components/generals/promocion-behaviour.tsx
+
+/**
+ * Componente: PromocionesChart (wrapper conmutador)
+ * Descripción: Selector que alterna entre dos implementaciones de gráfico (línea y área)
+ *              para visualizar canjes por promoción durante los últimos 7 días.
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ *
+ * Detalles:
+ * - Recibe `canjesRaw` con forma: { "YYYY-MM-DD": { "Promo A": n, "Promo B": m, ... }, ... }.
+ * - `mode` controla el tipo de gráfico mostrado: "line" o "area".
+ * - `LineChartImpl` y `AreaChartImpl` convierten la estructura bruta a una lista por fecha
+ *    y generan leyendas/colores estables por promoción.
+ * - Se usan componentes de UI (shadcn/ui) y Recharts, con tooltips y leyendas personalizadas.
+ *
+ * Notas:
+ * - No se altera la lógica funcional del componente original; solo se agrega documentación.
+ */
+
 "use client";
 
 import * as React from "react";

@@ -1,4 +1,15 @@
+// components/AdminHeader.tsx
 "use client";
+
+/**
+ * Componente: AdminHeader
+ * Descripción: Encabezado fijo del panel de administración con branding mínimo
+ *              y botón para cerrar sesión (usa acción `logout` del lado del servidor).
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ */
 
 import { Button } from "./ui/button";
 import { LogOut } from "lucide-react";

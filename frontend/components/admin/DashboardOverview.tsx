@@ -1,4 +1,22 @@
+// components/admin/DashboardOverview.tsx
 "use client";
+
+/**
+ * Componente: DashboardOverview
+ * Descripción: Panel de resumen para Administrador. Muestra:
+ *   - Tarjeta de total de colaboradores
+ *   - 3 gráficas tipo dona (promociones último mes, canjes último mes, promociones activas), segmentadas por negocio
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ *
+ * Notas:
+ * - Usa `fetch("/api/estadisticas-header")` (sin caché) para obtener métricas de cabecera desde una API Route.
+ * - Convierte objetos { nombreNegocio: valor } a datos compatibles con Recharts para renderizar donas.
+ * - `ChartContainer` y `ChartTooltip` vienen de tu sistema de charts (ShadCN + Recharts).
+ * - La UI usa un estilo "glass" en Cards y un fondo oscuro (clases utilitarias Tailwind).
+ */
 
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -13,6 +31,10 @@ import {
 } from "@/components/ui/chart";
 import PromocionesChart from "@/components/generals/promocion-behaviour";
 
+/**
+ * Estructura que devuelve el endpoint `/api/estadisticas-header`.
+ * - Cada objeto de distribución es un diccionario { nombreNegocio: número }.
+ */
 interface HeaderStats {
   promociones_por_negocio_ultimo_mes: Record<string, number>;
   canjes_por_negocio_ultimo_mes: Record<string, number>;
@@ -20,12 +42,20 @@ interface HeaderStats {
   total_colaboradores: number;
 }
 
+/** Paleta (css variables) cíclica para las series del donut. */
 const COLOR_VARS = Array.from({ length: 12 }, (_, i) => `var(--chart-${i + 1})`);
+
+/** Normaliza textos a slugs (para llaves de config/color CSS). */
 const slugify = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
+/** Tipo para cada punto del donut (Recharts). */
 type DonutDatum = { name: string; value: number; fill: string; slug: string };
 
+/**
+ * Convierte un objeto { etiqueta: valor } a un arreglo de datos para Recharts.
+ * - Genera un `slug` por etiqueta y asigna un `fill` que referencia una CSS var (`--color-${slug}`).
+ */
 function objectToDonutData(obj?: Record<string, number>): DonutDatum[] {
   if (!obj) return [];
   return Object.entries(obj).map(([name, value], i) => {
@@ -33,12 +63,21 @@ function objectToDonutData(obj?: Record<string, number>): DonutDatum[] {
     return { name, value: Number(value) || 0, slug, fill: `var(--color-${slug})` };
   });
 }
+
+/**
+ * Construye el `ChartConfig` utilizado por `ChartContainer` para mapear
+ * cada `slug` a su color/etiqueta. Incluye una clave base `value` (Total).
+ */
 function buildChartConfig(data: DonutDatum[]): ChartConfig {
   const cfg: ChartConfig = { value: { label: "Total" } } as ChartConfig;
   data.forEach((d, i) => ((cfg as any)[d.slug] = { label: d.name, color: COLOR_VARS[i % COLOR_VARS.length] }));
   return cfg;
 }
 
+/**
+ * Tarjeta simple para métricas directas (solo título + valor grande).
+ * - Se usa para "Total Colaboradores".
+ */
 function SimpleStatCard({
   title,
   value,
@@ -68,6 +107,11 @@ function SimpleStatCard({
   );
 }
 
+/**
+ * Tarjeta de dona reutilizable.
+ * - `dataObj`: diccionario { negocio: valor }.
+ * - Calcula total para el centro de la dona y tooltips por segmento.
+ */
 function DonutCard({ title, subtitle, dataObj, centerLabel = "Total" }: {
   title: string;
   subtitle?: string;
@@ -121,10 +165,16 @@ function DonutCard({ title, subtitle, dataObj, centerLabel = "Total" }: {
   );
 }
 
+/**
+ * Componente principal:
+ * - Carga métricas de cabecera al montar (useEffect -> fetchHeader).
+ * - Muestra tarjetas y donas construidas a partir del objeto `headerStats`.
+ */
 export function DashboardOverview() {
   const [headerStats, setHeaderStats] = useState<HeaderStats | null>(null);
   const [loading, setLoading] = useState(false);
 
+  /** Llama a la API route y actualiza estado local con manejo de errores (toast). */
   async function fetchHeader() {
     try {
       setLoading(true);
@@ -139,6 +189,7 @@ export function DashboardOverview() {
     }
   }
 
+  // Montaje: obtener estadísticas iniciales
   useEffect(() => { fetchHeader(); }, []);
 
   return (

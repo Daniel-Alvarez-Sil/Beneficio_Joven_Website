@@ -1,3 +1,47 @@
+// components/ColaboradorDashboard.tsx
+
+/**
+ * Componente: ColaboradorDashboard
+ * Descripción:
+ *   Panel de métricas para colaboradores. Muestra KPIs, rankings y series
+ *   históricas de canjes; además renderiza un gráfico superior de distribución
+ *   por promoción (últimos 7 días) a partir del detalle del negocio.
+ *
+ * Flujo de datos:
+ *   - getEstadisticas(): obtiene totales, top 5 con más/menos canjes y el
+ *     histórico crudo de canjes para 7 días.
+ *   - getNegocioDetalle(): obtiene un payload heterogéneo; se normaliza con
+ *     `toCanjesRawFromNegocioDetalle` a la forma:
+ *       { "YYYY-MM-DD": { "Promo A": 10, "Promo B": 5 } }
+ *   - PromocionesChart: componente que alterna entre gráfico de línea o de área
+ *     usando el `canjesRaw` normalizado.
+ *
+ * Utilidades:
+ *   - Formateo de fechas y números respetando la zona horaria MX (America/Mexico_City).
+ *   - Parsers/formatters: parseISO, ymdInTZ, dateFromYmdLocalMX, fmtDateShortMX.
+ *   - Normalización robusta del detalle (mapa día→promos o lista de eventos).
+ *
+ * UI:
+ *   - KPIs (total de canjes, promociones con canjes, rango observado).
+ *   - Top 5 con más/menos canjes (BarChart).
+ *   - Histórico de canjes y monto total (AreaChart).
+ *   - Botón “Actualizar” para refetch de ambos orígenes.
+ *
+ * Props:
+ *   - onLogout: () => void — callback para cerrar sesión (no usado aquí).
+ *   - colaboradorName: string — nombre de quien visualiza el panel (display).
+ *   - idNegocio?: string — identifica el negocio objetivo (default "3").
+ *
+ * Notas:
+ *   - Se manejan estados de carga y error para estadísticas y detalle.
+ *   - El componente es “client” y usa shadcn/ui, recharts y lucide-react.
+ *   - No se altera el payload original; se crea un objeto normalizado para gráficas.
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ */
+
 "use client"
 
 import { useEffect, useMemo, useState, useCallback } from "react"

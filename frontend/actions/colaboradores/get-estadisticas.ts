@@ -1,8 +1,28 @@
-// =============================================
-// File: app/actions/promociones/estadisticas.ts
-// Server Action para obtener las estadísticas
-// =============================================
+// actions/colaboradores/estadisticas.ts
 "use server";
+
+/**
+ * Módulo: acciones/colaboradores/estadisticas
+ * Descripción: Server Action que obtiene estadísticas agregadas de promociones para el negocio autenticado.
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ *
+ * Contenido:
+ * - Tipos `EstadisticaPromo` y `EstadisticasResponse` que describen la forma esperada de la respuesta.
+ * - Función `getEstadisticas` que realiza una petición GET autenticada al backend.
+ *
+ * Flujo de `getEstadisticas`:
+ * 1) Inyecta el Bearer token mediante `withAuthRetry`.
+ * 2) Llama al endpoint `/functionality/promociones/estadisticas/`.
+ * 3) Tolera que `withAuthRetry` regrese un `AxiosResponse` (usando `.data`) o directamente los datos.
+ * 4) Retorna los datos tipados como `EstadisticasResponse`.
+ *
+ * Notas:
+ * - Requiere variable de entorno `API_HOST`.
+ * - Autenticación: encabezado `Authorization: Bearer <token>`.
+ */
 
 import axios from "axios";
 import { withAuthRetry } from "@/lib/login/auth-wrapper";
@@ -23,12 +43,12 @@ export type EstadisticasResponse = {
 
 /**
  * Obtiene las estadísticas de promociones para un negocio.
- * @param idNegocio string (por ejemplo "3")
+ * @returns {Promise<EstadisticasResponse>} Objeto con totales, top 5/low 5 y serie histórica de canjes.
  */
 export async function getEstadisticas(
 ): Promise<EstadisticasResponse> {
 
-
+  // Llamada autenticada al endpoint de estadísticas de promociones
   const result = await withAuthRetry((token: string) =>
     axios.get(`${apiHost}/functionality/promociones/estadisticas/`, {
       headers: { Authorization: `Bearer ${token}` },

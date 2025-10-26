@@ -1,4 +1,25 @@
+// lib/login/dal.ts
 // DATA ACCESS LAYER (DAL) for session management in Next.js
+
+/**
+ * Módulo: lib/login/dal
+ * Descripción: Capa de acceso a datos para gestión de sesión y rol usando cookies en Next.js.
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ *
+ * Contenido:
+ * - `verifySession`: Lee la cookie `session`, valida su formato JSON y, si no existe `accessToken`,
+ *   redirige a `/login`. Devuelve un objeto con `{ isAuth, reason, token }`.
+ * - `verifyRole`: Lee la cookie `session`, valida su formato JSON y, si no existe `accessToken`,
+ *   redirige a `/login`. Devuelve `{ isAuth, reason, role }`.
+ *
+ * Notas:
+ * - Ambas funciones están envueltas en `cache(...)` para memoizar en el ciclo de vida del request.
+ * - En caso de cookie inválida (JSON malformado), se retorna un estado de sesión/rol inválido.
+ * - La validación remota del token (`validateToken`) está comentada en esta versión.
+ */
 
 import 'server-only'
  
@@ -33,7 +54,7 @@ import { cache } from 'react'
 //   }
 
 //   return { isAuth: true, reason: 'valid', token: session.accessToken }
-// })
+// })]
 
 // export const verifyRole = cache(async () => {
 //   console.log("Verifying role... Starting role verification")

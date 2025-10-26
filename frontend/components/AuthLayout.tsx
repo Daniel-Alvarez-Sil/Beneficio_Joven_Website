@@ -1,3 +1,16 @@
+// components/AuthLayout.tsx
+
+/**
+ * Componente: AuthLayout
+ * Descripción: Layout de autenticación con fondo tipo aurora/estrellas y una tarjeta
+ *              de vidrio para formularios (login/registro). Muestra título, subtítulo
+ *              opcional y el contenido recibido por props.
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ */
+
 import { Card, CardContent } from "./ui/card";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 

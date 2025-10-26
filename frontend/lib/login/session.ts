@@ -1,3 +1,25 @@
+// lib/login/session.ts
+
+/**
+ * Módulo: lib/login/session
+ * Descripción: Manejo de sesión mediante cookies seguras en Next.js (App Router, server-only).
+ *              Crea, actualiza y elimina la cookie `session` que contiene los tokens.
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ *
+ * Funciones:
+ * - createSession(tokens): Guarda en cookie los tokens con expiración calculada.
+ * - updateSession(tokens): Actualiza la cookie `session` si existe.
+ * - deleteSession(): Elimina la cookie `session`.
+ *
+ * Notas:
+ * - La cookie se marca como `httpOnly`, `secure`, `sameSite: 'lax'`, `path: '/'`.
+ * - `expiresIn` define (por defecto) el tiempo de expiración en segundos.
+ * - Todas las funciones usan `'use server'` y `server-only`.
+ */
+
 import 'server-only'
 import { cookies } from 'next/headers'
 

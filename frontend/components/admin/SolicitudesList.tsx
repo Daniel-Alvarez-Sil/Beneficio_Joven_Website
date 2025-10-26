@@ -1,4 +1,27 @@
+// components/admin/SolicitudesList.tsx
 "use client";
+
+/**
+ * Componente: SolicitudesList
+ * Descripción: Listado de solicitudes de negocio con búsqueda, filtrado por estatus,
+ *              refresco manual y revisión (aprobar/rechazar) dentro de un diálogo.
+ *
+ * Autores:
+ * - Yael Sinuhe Grajeda Martinez
+ * - Daniel Alvarez Sil
+ *
+ * Flujo principal:
+ * 1) `fetchSolicitudes()` consulta `/api/solicitudes` y carga el arreglo base.
+ * 2) `filtered` aplica filtros por texto (`q`) y por estatus (tabs).
+ * 3) `openVer(row)` abre el diálogo de detalle y resetea el estado de revisión.
+ * 4) `handleSubmitReview()` valida selección (aprobado/rechazado), compone el payload
+ *    y llama `reviewSolicitud`. Actualiza la fila en memoria y muestra toasts.
+ *
+ * Notas:
+ * - La revisión sólo se permite si la solicitud está en estatus "PENDIENTE".
+ * - El diálogo de "Ver" contiene los controles de revisión — no hay botón separado.
+ * - Se utilizan componentes UI (Card, Table, Tabs, Dialog, etc.) y `sonner` para toasts.
+ */
 
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
